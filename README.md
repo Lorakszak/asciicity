@@ -62,6 +62,33 @@ bootiful -s campfire
 
 More scenes coming soon.
 
+## Roadmap
+
+### Phase 1: Art loading from external files
+Load ASCII art from `.txt` or similar files instead of hardcoding in Rust string literals. Makes it easier to create and iterate on complex scene art.
+
+### Phase 2: Color and shading improvements
+Richer color palettes, gradient/shading effects, fire glow on nearby objects, smoke fading as it rises, ambient lighting.
+
+### Phase 3: Rich scenes
+Make all four scenes visually detailed and alive:
+- **Campfire** - Dense forest, waterfall, fireflies, detailed knight, glowing embers
+- **Cityscape** - Skyline with blinking lights, moving traffic, clouds, sun/moon cycle
+- **Nature landscape** - Mountains, river, birds, clouds, wind in grass, weather
+- **Lofi girl** - Girl at desk with headphones, sleeping cat, steaming coffee, city through window, lamp glow
+
+### Phase 4: Dynamic entity behaviors
+Wind affecting trees/smoke, parallax scrolling, day/night cycle, weather systems (rain, snow, fog), more interactive and organic animations.
+
+### Phase 5: User-defined scenes
+Config format (TOML/YAML) for users to define their own scenes without writing Rust. Custom art, entities, behaviors, and effects.
+
+### Phase 6: Screensaver mode
+Detect terminal idle and auto-show after configurable timeout. Shell integration via zsh/bash hooks.
+
+### Phase 7: Distribution
+Publish to crates.io. Pre-built binaries for Linux/macOS. AUR package.
+
 ## License
 
 MIT
