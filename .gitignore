@@ -1,0 +1,11 @@
+# Rust build artifacts
+/target/
+debug/
+**/*.rs.bk
+*.pdb
+
+# Brainstorm/plugin data
+.superpowers/
+
+# Design docs (local only)
+docs/
