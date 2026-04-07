@@ -1,4 +1,4 @@
-pub mod campfire;
+pub mod cityscape;
 
 /// Scene description for --list output.
 pub struct SceneInfo {
@@ -8,7 +8,7 @@ pub struct SceneInfo {
 
 pub const SCENES: &[SceneInfo] = &[
     SceneInfo {
-        name: "campfire",
-        description: "A knight resting by a campfire in the wilderness",
+        name: "cityscape",
+        description: "Rooftop view of a city skyline at night",
     },
 ];

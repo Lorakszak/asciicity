@@ -1,5 +1,7 @@
 mod art;
 #[allow(dead_code)]
+mod behavior;
+#[allow(dead_code)]
 mod color;
 #[allow(dead_code)]
 mod effects;
@@ -19,7 +21,7 @@ use clap::{Parser, ValueEnum};
 )]
 struct Cli {
     /// Scene to display
-    #[arg(short, long, value_enum, default_value_t = SceneName::Campfire)]
+    #[arg(short, long, value_enum, default_value_t = SceneName::Cityscape)]
     scene: SceneName,
 
     /// List available scenes
@@ -33,7 +35,7 @@ struct Cli {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, ValueEnum)]
 enum SceneName {
-    Campfire,
+    Cityscape,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -48,7 +50,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     match cli.scene {
-        SceneName::Campfire => engine::run::<scenes::campfire::CampfireScene>(cli.fps)?,
+        SceneName::Cityscape => engine::run::<scenes::cityscape::CityscapeScene>(cli.fps)?,
     }
 
     Ok(())
