@@ -83,13 +83,31 @@ impl Layer {
 
     /// Composite this layer onto a ratatui Buffer. None cells are skipped (transparent).
     pub fn composite(&self, buf: &mut ratatui::buffer::Buffer, area: ratatui::layout::Rect) {
+        self.composite_offset(buf, area, 0, 0);
+    }
+
+    /// Composite with a pixel offset (for parallax scrolling).
+    pub fn composite_offset(
+        &self,
+        buf: &mut ratatui::buffer::Buffer,
+        area: ratatui::layout::Rect,
+        offset_x: i32,
+        offset_y: i32,
+    ) {
         for y in 0..self.height.min(area.height) {
             for x in 0..self.width.min(area.width) {
                 if let Some(cell) = self.get(x, y) {
-                    let buf_cell = buf.cell_mut((area.x + x, area.y + y));
-                    if let Some(buf_cell) = buf_cell {
-                        buf_cell.set_char(cell.ch);
-                        buf_cell.set_style(cell.style);
+                    let bx = area.x as i32 + x as i32 + offset_x;
+                    let by = area.y as i32 + y as i32 + offset_y;
+                    if bx >= area.x as i32
+                        && bx < (area.x + area.width) as i32
+                        && by >= area.y as i32
+                        && by < (area.y + area.height) as i32
+                    {
+                        if let Some(buf_cell) = buf.cell_mut((bx as u16, by as u16)) {
+                            buf_cell.set_char(cell.ch);
+                            buf_cell.set_style(cell.style);
+                        }
                     }
                 }
             }
