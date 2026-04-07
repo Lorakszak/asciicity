@@ -43,9 +43,8 @@ impl Layer {
 
     /// Draw a multi-line string onto the layer at (x, y).
     /// Each line is a row. Spaces are treated as transparent (not written).
-    /// Leading/trailing newlines are stripped so r#" string literals work cleanly.
+    /// Trailing newlines are stripped; leading newlines are preserved for alignment.
     pub fn draw_ascii(&mut self, x: i32, y: i32, art: &str, style: Style) {
-        let art = art.strip_prefix('\n').unwrap_or(art);
         let art = art.strip_suffix('\n').unwrap_or(art);
         for (row, line) in art.lines().enumerate() {
             for (col, ch) in line.chars().enumerate() {

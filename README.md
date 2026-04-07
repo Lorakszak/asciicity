@@ -64,8 +64,8 @@ More scenes coming soon.
 
 ## Roadmap
 
-### Phase 1: Art loading from external files
-Load ASCII art from `.txt` or similar files instead of hardcoding in Rust string literals. Makes it easier to create and iterate on complex scene art.
+### ~~Phase 1: Art loading from external files~~ (done)
+Art loaded from `.txt` files in `assets/`, embedded via `include_str!` at compile time. User overrides supported from `~/.config/bootiful/scenes/`.
 
 ### Phase 2: Color and shading improvements
 Richer color palettes, gradient/shading effects, fire glow on nearby objects, smoke fading as it rises, ambient lighting.

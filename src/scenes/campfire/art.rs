@@ -1,60 +1,11 @@
-/// Characters used for twinkling stars
+// Embedded defaults - baked into binary at compile time from assets/ files.
+// Users can override these by placing files in ~/.config/bootiful/scenes/campfire/
+pub const KNIGHT_DEFAULT: &str = include_str!("../../../assets/campfire/knight.txt");
+pub const FIRE_DEFAULT: &str = include_str!("../../../assets/campfire/fire.txt");
+pub const TREE_SMALL_DEFAULT: &str = include_str!("../../../assets/campfire/tree_small.txt");
+pub const TREE_MEDIUM_DEFAULT: &str = include_str!("../../../assets/campfire/tree_medium.txt");
+
+// Simple character sets - not worth externalizing
 pub const STAR_CHARS: &[char] = &['.', '*', '+', '`'];
-
-/// Ground texture character
 pub const GROUND_CHAR: char = '.';
-
-/// Simple tree silhouettes (small, medium)
-pub const TREE_SMALL: &str = r#"
-  ^
- /|\
- /|\
-  |
-"#;
-
-pub const TREE_MEDIUM: &str = r#"
-   ^
-  /|\
- /|+|\
- /|+|\
-  |||
-   |
-"#;
-
-/// Knight sitting, facing right toward fire
-pub const KNIGHT: &str = r#"
-  ,O
-  |]_
-  /|
- / |
-"#;
-
-/// Knight breathing frame (shoulders slightly raised)
-pub const KNIGHT_BREATHE: &str = r#"
-  ,O
-  |]'
-  /|
- / |
-"#;
-
-/// Fire frames (3 frames for animation)
-pub const FIRE_FRAMES: &[&str] = &[
-    r#"
- (
-(*)
-_|_
-"#,
-    r#"
-
-(^)
-_|_
-"#,
-    r#"
- )
-(*')
-_|_
-"#,
-];
-
-/// Smoke particle characters
 pub const SMOKE_CHARS: &[char] = &['~', '.', '\'', ','];

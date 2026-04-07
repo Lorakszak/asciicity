@@ -26,6 +26,31 @@ struct Star {
     interval: f64,
 }
 
+/// Loaded art assets for the campfire scene.
+struct CampfireArt {
+    tree_small: String,
+    tree_medium: String,
+    knight_frames: Vec<String>,
+    fire_frames: Vec<String>,
+}
+
+impl CampfireArt {
+    fn load() -> Self {
+        let tree_small_frames = crate::art::load("campfire", "tree_small", art::TREE_SMALL_DEFAULT);
+        let tree_medium_frames =
+            crate::art::load("campfire", "tree_medium", art::TREE_MEDIUM_DEFAULT);
+        let knight_frames = crate::art::load("campfire", "knight", art::KNIGHT_DEFAULT);
+        let fire_frames = crate::art::load("campfire", "fire", art::FIRE_DEFAULT);
+
+        Self {
+            tree_small: tree_small_frames.into_iter().next().unwrap_or_default(),
+            tree_medium: tree_medium_frames.into_iter().next().unwrap_or_default(),
+            knight_frames,
+            fire_frames,
+        }
+    }
+}
+
 pub struct CampfireScene {
     width: u16,
     height: u16,
@@ -36,6 +61,7 @@ pub struct CampfireScene {
     entities: Vec<Entity>,
     smoke_timer: f64,
     smoke_next_interval: f64,
+    art: CampfireArt,
 }
 
 impl CampfireScene {
@@ -96,16 +122,31 @@ impl CampfireScene {
         // Place a few trees
         if self.width > 30 {
             // Left side trees
-            mid.draw_ascii(2, self.ground_y as i32 - 6, art::TREE_MEDIUM, tree_style);
+            mid.draw_ascii(
+                2,
+                self.ground_y as i32 - 6,
+                &self.art.tree_medium,
+                tree_style,
+            );
             if self.width > 50 {
-                mid.draw_ascii(8, self.ground_y as i32 - 4, art::TREE_SMALL, tree_style);
+                mid.draw_ascii(
+                    8,
+                    self.ground_y as i32 - 4,
+                    &self.art.tree_small,
+                    tree_style,
+                );
             }
 
             // Right side trees
             let right_x = self.width as i32 - 10;
-            mid.draw_ascii(right_x, self.ground_y as i32 - 6, art::TREE_MEDIUM, tree_style);
+            mid.draw_ascii(right_x, self.ground_y as i32 - 6, &self.art.tree_medium, tree_style);
             if self.width > 50 {
-                mid.draw_ascii(right_x - 7, self.ground_y as i32 - 4, art::TREE_SMALL, tree_style);
+                mid.draw_ascii(
+                    right_x - 7,
+                    self.ground_y as i32 - 4,
+                    &self.art.tree_small,
+                    tree_style,
+                );
             }
         }
     }
@@ -118,7 +159,7 @@ impl CampfireScene {
         let knight = Entity::new(
             center_x - 6.0,
             self.ground_y as f64 - 5.0,
-            vec![art::KNIGHT.to_string(), art::KNIGHT_BREATHE.to_string()],
+            self.art.knight_frames.clone(),
             3.0, // slow breathing cycle
             Style::default().fg(Color::Rgb(160, 160, 170)),
             FG,
@@ -129,7 +170,7 @@ impl CampfireScene {
         let fire = Entity::new(
             center_x + 1.0,
             self.ground_y as f64 - 4.0,
-            art::FIRE_FRAMES.iter().map(|s| s.to_string()).collect(),
+            self.art.fire_frames.clone(),
             0.2,
             Style::default().fg(Color::Rgb(255, 140, 0)),
             FG,
@@ -209,6 +250,7 @@ impl Scene for CampfireScene {
             entities: Vec::new(),
             smoke_timer: 0.0,
             smoke_next_interval: rng.random_range(0.5..1.5),
+            art: CampfireArt::load(),
         };
         scene.build_background(rng);
         scene.build_midground(rng);

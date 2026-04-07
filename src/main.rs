@@ -1,3 +1,4 @@
+mod art;
 mod engine;
 mod entity;
 mod layer;
