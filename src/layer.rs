@@ -1,4 +1,6 @@
-use ratatui::style::Style;
+use ratatui::style::{Color, Style};
+
+use crate::color::ColorMap;
 
 #[derive(Clone)]
 pub struct StyledCell {
@@ -41,10 +43,22 @@ impl Layer {
         }
     }
 
-    /// Draw a multi-line string onto the layer at (x, y).
-    /// Each line is a row. Spaces are treated as transparent (not written).
-    /// Trailing newlines are stripped; leading newlines are preserved for alignment.
+    /// Draw a multi-line string onto the layer at (x, y) with a uniform style.
+    /// Spaces are transparent. Trailing newlines stripped; leading preserved for alignment.
     pub fn draw_ascii(&mut self, x: i32, y: i32, art: &str, style: Style) {
+        self.draw_ascii_styled(x, y, art, style, None);
+    }
+
+    /// Draw a multi-line string with per-character coloring via an optional ColorMap.
+    /// Characters not in the color map use the base_style.
+    pub fn draw_ascii_styled(
+        &mut self,
+        x: i32,
+        y: i32,
+        art: &str,
+        base_style: Style,
+        colors: Option<&ColorMap>,
+    ) {
         let art = art.strip_suffix('\n').unwrap_or(art);
         for (row, line) in art.lines().enumerate() {
             for (col, ch) in line.chars().enumerate() {
@@ -54,6 +68,13 @@ impl Layer {
                 let px = x + col as i32;
                 let py = y + row as i32;
                 if px >= 0 && py >= 0 {
+                    let style = match colors {
+                        Some(cm) => match cm.get_color(ch, row, col) {
+                            Some(Color::Rgb(r, g, b)) => base_style.fg(Color::Rgb(r, g, b)),
+                            _ => base_style,
+                        },
+                        None => base_style,
+                    };
                     self.set(px as u16, py as u16, ch, style);
                 }
             }

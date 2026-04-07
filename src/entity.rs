@@ -1,5 +1,7 @@
 use ratatui::style::Style;
 
+use crate::color::ColorMap;
+
 pub struct Entity {
     /// Position with sub-cell precision
     pub x: f64,
@@ -17,6 +19,9 @@ pub struct Entity {
     frame_timer: f64,
     /// Style for rendering
     pub style: Style,
+    /// Per-character color overrides (from .colors or .colormap files)
+    #[allow(dead_code)]
+    pub colors: Option<ColorMap>,
     /// Whether this entity should be removed
     pub alive: bool,
     /// Which layer this entity renders to (0 = background, 3 = overlay)
@@ -42,6 +47,7 @@ impl Entity {
             frame_interval,
             frame_timer: 0.0,
             style,
+            colors: None,
             alive: true,
             layer,
         }

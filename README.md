@@ -9,6 +9,9 @@ Bootiful displays procedurally generated, animated ASCII art scenes directly in 
 - Procedurally generated scenes (never the same twice)
 - Layered rendering with transparent compositing
 - Entity system with animated sprites and spawners
+- External art files with user override support (`~/.config/bootiful/`)
+- Per-character coloring via `.colors` palette or `.colormap` positional grid
+- Post-compositing effects (glow, fade)
 - Lightweight (~15 FPS, minimal CPU usage)
 - Press any key to exit
 
@@ -67,8 +70,8 @@ More scenes coming soon.
 ### ~~Phase 1: Art loading from external files~~ (done)
 Art loaded from `.txt` files in `assets/`, embedded via `include_str!` at compile time. User overrides supported from `~/.config/bootiful/scenes/`.
 
-### Phase 2: Color and shading improvements
-Richer color palettes, gradient/shading effects, fire glow on nearby objects, smoke fading as it rises, ambient lighting.
+### ~~Phase 2: Color and shading improvements~~ (done)
+Color infrastructure: per-character coloring via `.colors` (char-based palette) and `.colormap` (positional grid) files. Color utilities (lerp, tint, fade). Post-compositing buffer effects (radial glow, vertical fade).
 
 ### Phase 3: Rich scenes
 Make all four scenes visually detailed and alive:
