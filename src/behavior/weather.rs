@@ -41,6 +41,9 @@ pub struct Weather {
     strike_timer: f64,
     strike_next: f64,
     bolt: Option<Bolt>,
+    /// Y of the horizon/rooftop line. Lightning bolts terminate here and the
+    /// thunder flash fades into it. None falls back to full layer height.
+    ground_y: Option<u16>,
 }
 
 impl Weather {
@@ -54,7 +57,15 @@ impl Weather {
             strike_timer: 0.0,
             strike_next: 3.0,
             bolt: None,
+            ground_y: None,
         }
+    }
+
+    /// Tell the weather where the horizon line is, so lightning bolts strike
+    /// near the rooftops and the thunder flash fades into the skyline instead
+    /// of cutting off in mid-air.
+    pub fn set_ground_y(&mut self, y: u16) {
+        self.ground_y = Some(y);
     }
 
     pub fn clear() -> Self {
@@ -130,16 +141,17 @@ impl Weather {
                 self.strike_timer = 0.0;
                 let base = self.intensity.max(0.1);
                 self.strike_next = rng.random_range(2.5..7.0) / base;
-                self.bolt = Some(Self::generate_bolt(rng, width, height));
+                let ground = self.ground_y.unwrap_or(height).min(height);
+                self.bolt = Some(Self::generate_bolt(rng, width, ground));
             }
         }
     }
 
-    fn generate_bolt(rng: &mut SmallRng, width: u16, height: u16) -> Bolt {
+    fn generate_bolt(rng: &mut SmallRng, width: u16, ground_y: u16) -> Bolt {
         let mut cells = Vec::new();
         let margin = (width / 6).max(1) as i32;
         let mut x: i32 = rng.random_range(margin..(width as i32 - margin).max(margin + 1));
-        let max_y = ((height as f64 * 0.55) as i32).max(4);
+        let max_y = (ground_y as i32).max(4);
         for y in 0..max_y {
             let dx: i32 = rng.random_range(-1..=1);
             let ch = match dx {
@@ -239,11 +251,19 @@ impl Weather {
             && bolt.age < BOLT_FLASH_PHASE
         {
             let t = 1.0 - (bolt.age / BOLT_FLASH_PHASE);
-            let lum = (180.0 * t) as u8;
-            let bg = Color::Rgb(lum, lum, lum.saturating_add(20));
-            let flash_style = Style::default().bg(bg);
-            let flash_rows = (layer.height as f64 * 0.55) as u16;
-            for y in 0..flash_rows {
+            let ground = self.ground_y.unwrap_or(layer.height).min(layer.height);
+            // Fade brightest at the top of the sky, easing out to zero right
+            // at the horizon. Anything below the ground line is left alone.
+            for y in 0..ground {
+                let depth = y as f64 / ground.max(1) as f64;
+                let falloff = (1.0 - depth).powf(1.4);
+                let lum_f = 200.0 * t * falloff;
+                if lum_f < 6.0 {
+                    continue;
+                }
+                let lum = lum_f as u8;
+                let bg = Color::Rgb(lum, lum, lum.saturating_add(20));
+                let flash_style = Style::default().bg(bg);
                 for x in 0..layer.width {
                     layer.set(x, y, ' ', flash_style);
                 }

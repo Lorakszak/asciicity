@@ -794,7 +794,7 @@ impl Scene for CityscapeScene {
             3,
         );
 
-        let weather = match cfg.weather.as_deref() {
+        let mut weather = match cfg.weather.as_deref() {
             Some(name) => {
                 let wt = weather_from_name(name);
                 if wt == WeatherType::Clear {
@@ -805,6 +805,7 @@ impl Scene for CityscapeScene {
             }
             None => Weather::clear(),
         };
+        weather.set_ground_y(skyline_y);
 
         let mut scene = Self {
             width,
@@ -980,5 +981,6 @@ impl Scene for CityscapeScene {
         self.build_road();
         self.setup_stars(rng);
         self.setup_entities(rng);
+        self.weather.set_ground_y(self.skyline_y);
     }
 }
