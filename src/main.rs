@@ -13,7 +13,7 @@ mod scenes;
 
 use clap::{Parser, ValueEnum};
 
-use crate::scene::SceneConfig;
+use crate::scene::{CloudDirection, SceneConfig};
 
 #[derive(Parser)]
 #[command(
@@ -53,6 +53,10 @@ struct Cli {
     /// Car spawn rate multiplier
     #[arg(long, default_value_t = 1.0)]
     car_rate: f64,
+
+    /// Direction clouds drift across the sky
+    #[arg(long, value_enum, default_value_t = CloudDirectionArg::Both)]
+    cloud_direction: CloudDirectionArg,
 
     /// Weather override
     #[arg(long, value_enum)]
@@ -97,6 +101,23 @@ impl WeatherArg {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, ValueEnum)]
+enum CloudDirectionArg {
+    Left,
+    Right,
+    Both,
+}
+
+impl CloudDirectionArg {
+    fn to_cfg(self) -> CloudDirection {
+        match self {
+            CloudDirectionArg::Left => CloudDirection::Left,
+            CloudDirectionArg::Right => CloudDirection::Right,
+            CloudDirectionArg::Both => CloudDirection::Both,
+        }
+    }
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
@@ -114,6 +135,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         heli_rate: cli.heli_rate,
         bird_rate: cli.bird_rate,
         car_rate: cli.car_rate,
+        cloud_direction: cli.cloud_direction.to_cfg(),
         weather: cli.weather.map(|w| w.as_str().to_string()),
         weather_intensity: cli.weather_intensity,
         time_speed: cli.time_speed,

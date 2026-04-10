@@ -1,6 +1,14 @@
 use rand::rngs::SmallRng;
 use ratatui::Frame;
 
+/// Direction the wind carries drifting sky entities (clouds).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CloudDirection {
+    Left,
+    Right,
+    Both,
+}
+
 /// Runtime configuration passed to every scene from the CLI.
 ///
 /// Rate multipliers scale spawn intervals inversely: 2.0 = twice as frequent,
@@ -13,7 +21,8 @@ pub struct SceneConfig {
     pub heli_rate: f64,
     pub bird_rate: f64,
     pub car_rate: f64,
-    /// Weather override: "clear", "rain", "snow", "fog". None leaves the scene default.
+    pub cloud_direction: CloudDirection,
+    /// Weather override: "clear", "rain", "snow", "fog", "thunder". None leaves the scene default.
     pub weather: Option<String>,
     pub weather_intensity: f64,
     /// In-game hours per real second for the day/night cycle.
@@ -30,6 +39,7 @@ impl Default for SceneConfig {
             heli_rate: 1.0,
             bird_rate: 1.0,
             car_rate: 1.0,
+            cloud_direction: CloudDirection::Both,
             weather: None,
             weather_intensity: 1.0,
             time_speed: 0.2,

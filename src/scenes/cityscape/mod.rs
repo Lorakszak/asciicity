@@ -11,7 +11,7 @@ use crate::behavior::weather::{Weather, WeatherType};
 use crate::behavior::wind::Wind;
 use crate::entity::Entity;
 use crate::layer::Layer;
-use crate::scene::{scale_interval, Scene, SceneConfig};
+use crate::scene::{scale_interval, CloudDirection, Scene, SceneConfig};
 
 // color utilities available: crate::color::{lerp_rgb, tint_rgb, fade_rgb}
 
@@ -474,7 +474,19 @@ impl CityscapeScene {
         let idx = rng.random_range(0..self.art.clouds.len());
         let frames = self.art.clouds[idx].frames.clone();
         let y = rng.random_range(1.0..(self.skyline_y as f64 * 0.35));
-        let x = -(rng.random_range(5.0..25.0));
+
+        let going_right = match self.cfg.cloud_direction {
+            CloudDirection::Right => true,
+            CloudDirection::Left => false,
+            CloudDirection::Both => rng.random_range(0..2_u32) == 0,
+        };
+
+        let speed = rng.random_range(3.0..8.0);
+        let x = if going_right {
+            -(rng.random_range(5.0..25.0))
+        } else {
+            self.width as f64 + rng.random_range(5.0..25.0)
+        };
 
         let mut cloud = Entity::new(
             x,
@@ -484,7 +496,7 @@ impl CityscapeScene {
             Style::default(),
             OVERLAY,
         );
-        cloud.vx = rng.random_range(3.0..8.0);
+        cloud.vx = if going_right { speed } else { -speed };
         cloud.tag = TAG_CLOUD;
         // Per-cloud brightness bias 0.75..1.0 so some clouds are dimmer
         cloud.meta = rng.random_range(0.75..1.0);
@@ -609,23 +621,41 @@ impl CityscapeScene {
     fn spawn_birds(&mut self, rng: &mut SmallRng) {
         let flock_size = rng.random_range(2..5_u32);
         let base_y = rng.random_range(3.0..(self.skyline_y as f64 * 0.5));
-        let base_x: f64 = -5.0;
-        let base_vx = rng.random_range(4.0..7.0);
+        let going_right = rng.random_range(0..2_u32) == 0;
+        let base_speed = rng.random_range(4.0..7.0);
+        let base_x: f64 = if going_right {
+            -5.0
+        } else {
+            self.width as f64 + 5.0
+        };
+        let bird_frames_right = self.art.bird.frames.clone();
+        let bird_frames_left = crate::art::mirror_frames(&self.art.bird.frames);
 
         // One color per flock so birds feel like a group
         let flock_color = pick_vehicle_color(rng);
         let flock_freq = rng.random_range(1.8..3.0);
         for i in 0..flock_size {
-            let frames = self.art.bird.frames.clone();
+            let frames = if going_right {
+                bird_frames_right.clone()
+            } else {
+                bird_frames_left.clone()
+            };
+            let cascade_off = i as f64 * 2.0;
+            let spawn_x = if going_right {
+                base_x - cascade_off
+            } else {
+                base_x + cascade_off
+            };
             let mut bird = Entity::new(
-                base_x - (i as f64 * 2.0),
+                spawn_x,
                 base_y + rng.random_range(-1.0..1.0),
                 frames,
                 0.3,
                 Style::default().fg(flock_color),
                 OVERLAY,
             );
-            bird.vx = base_vx + rng.random_range(-0.5..0.5);
+            let vx = base_speed + rng.random_range(-0.5..0.5);
+            bird.vx = if going_right { vx } else { -vx };
             bird.vy = rng.random_range(-0.1..0.1);
             bird.tag = TAG_BIRD;
             bird.bob_amp = rng.random_range(1.5..3.0);
