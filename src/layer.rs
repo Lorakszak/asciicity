@@ -45,6 +45,7 @@ impl Layer {
 
     /// Draw a multi-line string onto the layer at (x, y) with a uniform style.
     /// Spaces are transparent. Trailing newlines stripped; leading preserved for alignment.
+    #[allow(dead_code)]
     pub fn draw_ascii(&mut self, x: i32, y: i32, art: &str, style: Style) {
         self.draw_ascii_styled(x, y, art, style, None);
     }
@@ -99,20 +100,23 @@ impl Layer {
         offset_x: i32,
         offset_y: i32,
     ) {
+        let ax = area.x as i32;
+        let ay = area.y as i32;
+        let ax_end = ax + area.width as i32;
+        let ay_end = ay + area.height as i32;
         for y in 0..self.height {
             for x in 0..self.width {
                 if let Some(cell) = self.get(x, y) {
-                    let bx = area.x as i32 + x as i32 + offset_x;
-                    let by = area.y as i32 + y as i32 + offset_y;
-                    if bx >= area.x as i32
-                        && bx < (area.x + area.width) as i32
-                        && by >= area.y as i32
-                        && by < (area.y + area.height) as i32
+                    let bx = ax + x as i32 + offset_x;
+                    let by = ay + y as i32 + offset_y;
+                    if bx >= ax
+                        && bx < ax_end
+                        && by >= ay
+                        && by < ay_end
+                        && let Some(buf_cell) = buf.cell_mut((bx as u16, by as u16))
                     {
-                        if let Some(buf_cell) = buf.cell_mut((bx as u16, by as u16)) {
-                            buf_cell.set_char(cell.ch);
-                            buf_cell.set_style(cell.style);
-                        }
+                        buf_cell.set_char(cell.ch);
+                        buf_cell.set_style(cell.style);
                     }
                 }
             }

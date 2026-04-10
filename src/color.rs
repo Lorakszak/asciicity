@@ -46,10 +46,13 @@ pub fn parse_palette(content: &str) -> Option<ColorMap> {
             continue;
         }
         let mut chars = line.chars();
-        let ch = chars.next()?;
+        let Some(ch) = chars.next() else { continue };
         let rest = chars.as_str().trim();
-        let color = parse_hex_color(rest)?;
-        map.insert(ch, color);
+        if let Some(color) = parse_hex_color(rest) {
+            map.insert(ch, color);
+        }
+        // Silently skip malformed lines: one bad line should not discard
+        // the entire palette. User-authored files should be forgiving.
     }
     if map.is_empty() {
         None
@@ -94,15 +97,17 @@ pub fn parse_colormap(content: &str) -> Option<ColorMap> {
 
         if in_palette {
             let mut chars = trimmed.chars();
-            let key = chars.next()?;
+            let Some(key) = chars.next() else { continue };
             let rest = chars.as_str().trim();
-            let color = parse_hex_color(rest)?;
-            palette.insert(key, color);
+            if let Some(color) = parse_hex_color(rest) {
+                palette.insert(key, color);
+            }
         } else if in_map {
             // Use raw line (not trimmed) to preserve leading spaces for alignment
-            let row: Vec<Option<char>> = line.chars().map(|c| {
-                if c == ' ' { None } else { Some(c) }
-            }).collect();
+            let row: Vec<Option<char>> = line
+                .chars()
+                .map(|c| if c == ' ' { None } else { Some(c) })
+                .collect();
             grid.push(row);
         }
     }
@@ -159,5 +164,69 @@ pub fn fade_rgb(color: Color, factor: f64) -> Color {
             )
         }
         _ => color,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_hex_color_valid() {
+        assert_eq!(parse_hex_color("#FF8000"), Some(Color::Rgb(255, 128, 0)));
+        assert_eq!(parse_hex_color("#000000"), Some(Color::Rgb(0, 0, 0)));
+    }
+
+    #[test]
+    fn parse_hex_color_rejects_bad_input() {
+        assert_eq!(parse_hex_color("FF8000"), None); // missing #
+        assert_eq!(parse_hex_color("#FF80"), None); // too short
+        assert_eq!(parse_hex_color("#GG8000"), None); // non-hex
+        assert_eq!(parse_hex_color("#FF800000"), None); // too long
+    }
+
+    #[test]
+    fn parse_palette_skips_bad_lines() {
+        let content = "O #FFD700\nX nothex\n# a comment\n, #CCCCCC\n";
+        let map = parse_palette(content).expect("valid lines should still parse");
+        match map {
+            ColorMap::Palette(p) => {
+                assert_eq!(p.get(&'O'), Some(&Color::Rgb(0xFF, 0xD7, 0x00)));
+                assert_eq!(p.get(&','), Some(&Color::Rgb(0xCC, 0xCC, 0xCC)));
+                assert!(!p.contains_key(&'X'));
+            }
+            _ => panic!("expected palette variant"),
+        }
+    }
+
+    #[test]
+    fn parse_palette_all_bad_returns_none() {
+        assert!(parse_palette("nothing valid\n# just comments\n").is_none());
+    }
+
+    #[test]
+    fn lerp_rgb_endpoints_and_midpoint() {
+        let a = Color::Rgb(0, 0, 0);
+        let b = Color::Rgb(100, 200, 50);
+        assert_eq!(lerp_rgb(a, b, 0.0), a);
+        assert_eq!(lerp_rgb(a, b, 1.0), b);
+        assert_eq!(lerp_rgb(a, b, 0.5), Color::Rgb(50, 100, 25));
+    }
+
+    #[test]
+    fn lerp_rgb_clamps_out_of_range_t() {
+        let a = Color::Rgb(0, 0, 0);
+        let b = Color::Rgb(100, 100, 100);
+        assert_eq!(lerp_rgb(a, b, -10.0), a);
+        assert_eq!(lerp_rgb(a, b, 10.0), b);
+    }
+
+    #[test]
+    fn fade_rgb_clamps_factor() {
+        let c = Color::Rgb(200, 100, 50);
+        assert_eq!(fade_rgb(c, 0.0), Color::Rgb(0, 0, 0));
+        assert_eq!(fade_rgb(c, 1.0), c);
+        assert_eq!(fade_rgb(c, -5.0), Color::Rgb(0, 0, 0));
+        assert_eq!(fade_rgb(c, 5.0), c);
     }
 }

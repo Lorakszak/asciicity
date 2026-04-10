@@ -1,7 +1,6 @@
 mod art;
 #[allow(dead_code)]
 mod behavior;
-#[allow(dead_code)]
 mod color;
 #[allow(dead_code)]
 mod effects;
@@ -118,6 +117,37 @@ impl CloudDirectionArg {
     }
 }
 
+/// Reject non-finite values and values outside `[min, max]`. Gives the user a
+/// clear error instead of silent NaN propagation or a `Duration` panic.
+fn check_range(name: &str, value: f64, min: f64, max: f64) -> Result<f64, String> {
+    if !value.is_finite() {
+        return Err(format!("--{name} must be a finite number, got {value}"));
+    }
+    if value < min || value > max {
+        return Err(format!("--{name} must be in [{min}, {max}], got {value}"));
+    }
+    Ok(value)
+}
+
+fn validate(cli: &Cli) -> Result<(), String> {
+    if cli.fps == 0 {
+        return Err("--fps must be at least 1".into());
+    }
+    if cli.fps > 240 {
+        return Err(format!("--fps must be <= 240, got {}", cli.fps));
+    }
+    check_range("cloud-rate", cli.cloud_rate, 0.0, 100.0)?;
+    check_range("plane-rate", cli.plane_rate, 0.0, 100.0)?;
+    check_range("heli-rate", cli.heli_rate, 0.0, 100.0)?;
+    check_range("bird-rate", cli.bird_rate, 0.0, 100.0)?;
+    check_range("car-rate", cli.car_rate, 0.0, 100.0)?;
+    check_range("weather-intensity", cli.weather_intensity, 0.0, 10.0)?;
+    check_range("time-speed", cli.time_speed, 0.0, 1000.0)?;
+    // start-time is modulo 24 at use, but reject obviously wrong values upfront.
+    check_range("start-time", cli.start_time, 0.0, 24.0)?;
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
@@ -127,6 +157,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("  {:<12} - {}", scene.name, scene.description);
         }
         return Ok(());
+    }
+
+    if let Err(msg) = validate(&cli) {
+        eprintln!("error: {msg}");
+        std::process::exit(2);
     }
 
     let cfg = SceneConfig {
@@ -143,9 +178,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     match cli.scene {
-        SceneName::Cityscape => {
-            engine::run::<scenes::cityscape::CityscapeScene>(cli.fps, cfg)?
-        }
+        SceneName::Cityscape => engine::run::<scenes::cityscape::CityscapeScene>(cli.fps, cfg)?,
     }
 
     Ok(())

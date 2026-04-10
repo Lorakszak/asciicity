@@ -1,5 +1,5 @@
-use rand::rngs::SmallRng;
 use rand::Rng;
+use rand::rngs::SmallRng;
 
 /// Global wind state with smooth gusting.
 /// Scenes tick this and query `force_x()` to apply wind to entities.

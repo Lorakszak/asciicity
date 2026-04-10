@@ -49,13 +49,16 @@ impl Default for SceneConfig {
 }
 
 /// Scale a base interval by a rate multiplier.
-/// rate 0.0 returns `f64::INFINITY` so the caller treats it as "never".
+///
+/// Returns `f64::INFINITY` (meaning "never spawn") if `rate` is zero,
+/// negative, or non-finite, and if `base` is not finite. This keeps a bad
+/// config from silently disabling a spawner by producing NaN comparisons
+/// that are always false.
 pub fn scale_interval(base: f64, rate: f64) -> f64 {
-    if rate <= 0.0 {
-        f64::INFINITY
-    } else {
-        base / rate
+    if !base.is_finite() || !rate.is_finite() || rate <= 0.0 {
+        return f64::INFINITY;
     }
+    base / rate
 }
 
 pub trait Scene {
@@ -72,4 +75,24 @@ pub trait Scene {
 
     /// Handle terminal resize.
     fn resize(&mut self, width: u16, height: u16, rng: &mut SmallRng);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn scale_interval_rejects_non_finite() {
+        assert_eq!(scale_interval(1.0, f64::NAN), f64::INFINITY);
+        assert_eq!(scale_interval(1.0, f64::INFINITY), f64::INFINITY);
+        assert_eq!(scale_interval(f64::NAN, 1.0), f64::INFINITY);
+        assert_eq!(scale_interval(1.0, -1.0), f64::INFINITY);
+        assert_eq!(scale_interval(1.0, 0.0), f64::INFINITY);
+    }
+
+    #[test]
+    fn scale_interval_scales_normally() {
+        assert!((scale_interval(10.0, 2.0) - 5.0).abs() < 1e-9);
+        assert!((scale_interval(10.0, 0.5) - 20.0).abs() < 1e-9);
+    }
 }

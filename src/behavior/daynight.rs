@@ -50,11 +50,7 @@ impl DayNight {
             let (t1, (r1, g1, b1)) = SKY_KEYFRAMES[i + 1];
             if self.time >= t0 && self.time <= t1 {
                 let t = (self.time - t0) / (t1 - t0);
-                return lerp_rgb(
-                    Color::Rgb(r0, g0, b0),
-                    Color::Rgb(r1, g1, b1),
-                    t,
-                );
+                return lerp_rgb(Color::Rgb(r0, g0, b0), Color::Rgb(r1, g1, b1), t);
             }
         }
         let (_, (r, g, b)) = SKY_KEYFRAMES[0];

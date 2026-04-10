@@ -2,19 +2,21 @@ use std::io;
 use std::time::{Duration, Instant};
 
 use crossterm::{
-    execute,
     cursor,
     event::{self, Event, KeyEventKind},
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    execute,
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use rand::rngs::SmallRng;
 use rand::SeedableRng;
-use ratatui::{backend::CrosstermBackend, Terminal};
+use rand::rngs::SmallRng;
+use ratatui::{Terminal, backend::CrosstermBackend};
 
 use crate::scene::{Scene, SceneConfig};
 
 pub fn run<S: Scene>(fps: u32, cfg: SceneConfig) -> Result<(), Box<dyn std::error::Error>> {
-    // Install panic hook to restore terminal on panic
+    // Install panic hook so a panic anywhere inside the render loop still
+    // restores the terminal. Normal Err returns are handled by the teardown
+    // block below.
     let original_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |panic_info| {
         let _ = disable_raw_mode();
@@ -22,8 +24,18 @@ pub fn run<S: Scene>(fps: u32, cfg: SceneConfig) -> Result<(), Box<dyn std::erro
         original_hook(panic_info);
     }));
 
-    // Terminal setup
     enable_raw_mode()?;
+
+    // Once raw mode is on we MUST disable it again, even if any setup step
+    // below returns Err. Collect the run result and tear down unconditionally.
+    let result = run_inner::<S>(fps, cfg);
+
+    let _ = disable_raw_mode();
+    let _ = execute!(io::stderr(), LeaveAlternateScreen, cursor::Show);
+    result
+}
+
+fn run_inner<S: Scene>(fps: u32, cfg: SceneConfig) -> Result<(), Box<dyn std::error::Error>> {
     let mut stderr = io::stderr();
     execute!(stderr, EnterAlternateScreen, cursor::Hide)?;
     let backend = CrosstermBackend::new(stderr);
@@ -33,16 +45,19 @@ pub fn run<S: Scene>(fps: u32, cfg: SceneConfig) -> Result<(), Box<dyn std::erro
     let size = terminal.size()?;
     let mut scene = S::setup(size.width, size.height, &cfg, &mut rng);
 
+    // Defensive floor: fps = 0 would make from_secs_f64 panic on infinity.
+    // CLI validation already rejects this, but belt-and-suspenders.
+    let fps = fps.max(1);
     let frame_duration = Duration::from_secs_f64(1.0 / fps as f64);
     let mut last_tick = Instant::now();
 
-    let result = main_loop(&mut terminal, &mut scene, &mut rng, frame_duration, &mut last_tick);
-
-    // Terminal teardown (always runs)
-    disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen, cursor::Show)?;
-
-    result
+    main_loop(
+        &mut terminal,
+        &mut scene,
+        &mut rng,
+        frame_duration,
+        &mut last_tick,
+    )
 }
 
 fn main_loop<S: Scene>(
@@ -53,20 +68,16 @@ fn main_loop<S: Scene>(
     last_tick: &mut Instant,
 ) -> Result<(), Box<dyn std::error::Error>> {
     loop {
-        // Calculate delta time
         let now = Instant::now();
         let dt = now.duration_since(*last_tick).as_secs_f64();
         *last_tick = now;
 
-        // Tick the scene
         scene.tick(dt, rng);
 
-        // Render
         terminal.draw(|frame| {
             scene.render(frame);
         })?;
 
-        // Input polling: any key = quit
         let sleep_time = frame_duration.saturating_sub(Instant::now().duration_since(now));
         if event::poll(sleep_time)? {
             match event::read()? {

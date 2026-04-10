@@ -1,9 +1,9 @@
 mod art;
 
-use rand::rngs::SmallRng;
 use rand::Rng;
-use ratatui::style::{Color, Style};
+use rand::rngs::SmallRng;
 use ratatui::Frame;
+use ratatui::style::{Color, Style};
 
 use crate::behavior::daynight::DayNight;
 use crate::behavior::parallax::Parallax;
@@ -11,7 +11,7 @@ use crate::behavior::weather::{Weather, WeatherType};
 use crate::behavior::wind::Wind;
 use crate::entity::Entity;
 use crate::layer::Layer;
-use crate::scene::{scale_interval, CloudDirection, Scene, SceneConfig};
+use crate::scene::{CloudDirection, Scene, SceneConfig, scale_interval};
 
 // color utilities available: crate::color::{lerp_rgb, tint_rgb, fade_rgb}
 
@@ -41,15 +41,15 @@ const MAX_CLOUDS: usize = 10;
 
 // Shared vehicle/fauna palette (9 colors). Used for planes, helis, cars, birds.
 const VEHICLE_PALETTE: [Color; 9] = [
-    Color::Rgb(210, 70, 70),    // red
-    Color::Rgb(70, 110, 210),   // blue
-    Color::Rgb(200, 200, 210),  // silver
-    Color::Rgb(220, 200, 70),   // yellow
-    Color::Rgb(70, 180, 100),   // green
-    Color::Rgb(220, 140, 50),   // orange
-    Color::Rgb(170, 90, 190),   // purple
-    Color::Rgb(70, 180, 180),   // teal
-    Color::Rgb(230, 230, 230),  // white
+    Color::Rgb(210, 70, 70),   // red
+    Color::Rgb(70, 110, 210),  // blue
+    Color::Rgb(200, 200, 210), // silver
+    Color::Rgb(220, 200, 70),  // yellow
+    Color::Rgb(70, 180, 100),  // green
+    Color::Rgb(220, 140, 50),  // orange
+    Color::Rgb(170, 90, 190),  // purple
+    Color::Rgb(70, 180, 180),  // teal
+    Color::Rgb(230, 230, 230), // white
 ];
 
 fn pick_vehicle_color(rng: &mut SmallRng) -> Color {
@@ -78,9 +78,16 @@ struct Star {
     interval: f64,
 }
 
+/// A plane sprite plus which direction its source art faces. Flags keep the
+/// mirror logic direction-explicit instead of relying on vec indices.
+struct PlaneArt {
+    data: crate::art::ArtData,
+    faces_right: bool,
+}
+
 struct CityscapeArt {
     clouds: Vec<crate::art::ArtData>,
-    planes: Vec<crate::art::ArtData>,
+    planes: Vec<PlaneArt>,
     helis: Vec<crate::art::ArtData>,
     bird: crate::art::ArtData,
     cars: Vec<crate::art::ArtData>,
@@ -97,9 +104,18 @@ impl CityscapeArt {
                 crate::art::load("cityscape", "cloud_tiny", art::CLOUD_TINY_DEFAULT),
             ],
             planes: vec![
-                crate::art::load("cityscape", "plane", art::PLANE_DEFAULT),
-                crate::art::load("cityscape", "plane2", art::PLANE2_DEFAULT),
-                crate::art::load("cityscape", "plane3", art::PLANE3_DEFAULT),
+                PlaneArt {
+                    data: crate::art::load("cityscape", "plane", art::PLANE_DEFAULT),
+                    faces_right: false,
+                },
+                PlaneArt {
+                    data: crate::art::load("cityscape", "plane2", art::PLANE2_DEFAULT),
+                    faces_right: false,
+                },
+                PlaneArt {
+                    data: crate::art::load("cityscape", "plane3", art::PLANE3_DEFAULT),
+                    faces_right: true,
+                },
             ],
             helis: vec![
                 crate::art::load("cityscape", "heli", art::HELI_DEFAULT),
@@ -115,6 +131,19 @@ impl CityscapeArt {
             ],
         }
     }
+}
+
+/// Clamp road height so the skyline subtraction never underflows on tiny
+/// terminals. Returns `(road_rows, skyline_y)`.
+fn compute_layout(height: u16) -> (u16, u16) {
+    // Reserve at least one row for the sky, cap road at 12, prefer ~1/4 of
+    // the screen. `saturating_sub(1)` ensures skyline_y >= 0 even when
+    // height is 0.
+    let max_road = height.saturating_sub(1).min(12);
+    let preferred = (height / 4).max(4);
+    let road_rows = preferred.min(max_road);
+    let skyline_y = height.saturating_sub(road_rows);
+    (road_rows, skyline_y)
 }
 
 pub struct CityscapeScene {
@@ -172,24 +201,37 @@ fn weather_from_name(name: &str) -> WeatherType {
     }
 }
 
+/// Inputs to `generate_buildings`, extracted into a struct so the fn signature
+/// stays readable and we don't trip clippy::too_many_arguments.
+struct BuildingGenParams {
+    layer_width: i32,
+    skyline_y: i32,
+    /// Min building height as fraction of sky height.
+    min_frac: f64,
+    /// Max building height as fraction of sky height.
+    max_frac: f64,
+    min_width: i32,
+    max_width: i32,
+    gap_min: i32,
+    gap_max: i32,
+}
+
 impl CityscapeScene {
-    fn generate_buildings(
-        rng: &mut SmallRng,
-        layer_width: i32,
-        skyline_y: i32,
-        min_frac: f64,
-        max_frac: f64,
-        min_width: i32,
-        max_width: i32,
-        gap_min: i32,
-        gap_max: i32,
-    ) -> Vec<Building> {
+    fn generate_buildings(rng: &mut SmallRng, p: &BuildingGenParams) -> Vec<Building> {
         let mut buildings = Vec::new();
         let mut x = 0;
-        let sky_h = skyline_y as f64;
-        while x < layer_width {
-            let w = rng.random_range(min_width..max_width);
-            let h = rng.random_range((sky_h * min_frac) as i32..(sky_h * max_frac) as i32);
+        let sky_h = p.skyline_y.max(1) as f64;
+        // Guard against inverted ranges on tiny screens: random_range panics
+        // when start >= end.
+        let min_h = ((sky_h * p.min_frac) as i32).max(1);
+        let max_h = ((sky_h * p.max_frac) as i32).max(min_h + 1);
+        let min_w = p.min_width.max(1);
+        let max_w = p.max_width.max(min_w + 1);
+        let gap_lo = p.gap_min;
+        let gap_hi = p.gap_max.max(gap_lo + 1);
+        while x < p.layer_width {
+            let w = rng.random_range(min_w..max_w);
+            let h = rng.random_range(min_h..max_h);
             let has_antenna = rng.random_range(0..4_u32) == 0;
             buildings.push(Building {
                 x,
@@ -203,7 +245,7 @@ impl CityscapeScene {
                 },
                 window_seed: rng.random_range(0..10000_u64),
             });
-            x += w + rng.random_range(gap_min..gap_max);
+            x += w + rng.random_range(gap_lo..gap_hi);
         }
         buildings
     }
@@ -309,10 +351,13 @@ impl CityscapeScene {
             while wy < ground_y - 1 {
                 let mut wx = b.x + 2;
                 while wx < b.x + b.width - 2 {
-                    if wx >= 0 && wx < layer.width as i32 && wy >= 0 && wy < layer.height as i32 {
-                        if Self::is_window_lit(b.window_seed, wx, wy, time, night_factor) {
-                            layer.set(wx as u16, wy as u16, '#', lit_style);
-                        }
+                    if wx >= 0
+                        && wx < layer.width as i32
+                        && wy >= 0
+                        && wy < layer.height as i32
+                        && Self::is_window_lit(b.window_seed, wx, wy, time, night_factor)
+                    {
+                        layer.set(wx as u16, wy as u16, '#', lit_style);
                     }
                     wx += 3;
                 }
@@ -344,7 +389,8 @@ impl CityscapeScene {
         let roof_style = Style::default().fg(crate::color::lerp_rgb(roof_night, roof_day, ambient));
         let ant_night = Color::Rgb(50, 50, 60);
         let ant_day = Color::Rgb(100, 100, 110);
-        let antenna_style = Style::default().fg(crate::color::lerp_rgb(ant_night, ant_day, ambient));
+        let antenna_style =
+            Style::default().fg(crate::color::lerp_rgb(ant_night, ant_day, ambient));
 
         Self::draw_buildings_to_layer(
             &mut self.far_layer,
@@ -356,9 +402,7 @@ impl CityscapeScene {
         );
 
         let night = 1.0 - self.daynight.ambient();
-        let lit_style = Style::default()
-            .fg(Color::Rgb(220, 200, 140))
-            .bg(base);
+        let lit_style = Style::default().fg(Color::Rgb(220, 200, 140)).bg(base);
         Self::draw_windows(
             &mut self.far_layer,
             &self.far_buildings,
@@ -381,7 +425,8 @@ impl CityscapeScene {
         let roof_style = Style::default().fg(crate::color::lerp_rgb(roof_night, roof_day, ambient));
         let ant_night = Color::Rgb(40, 40, 50);
         let ant_day = Color::Rgb(90, 90, 100);
-        let antenna_style = Style::default().fg(crate::color::lerp_rgb(ant_night, ant_day, ambient));
+        let antenna_style =
+            Style::default().fg(crate::color::lerp_rgb(ant_night, ant_day, ambient));
 
         Self::draw_buildings_to_layer(
             &mut self.mid_layer,
@@ -467,18 +512,27 @@ impl CityscapeScene {
         self.entities.iter().filter(|e| e.tag == TAG_CLOUD).count()
     }
 
+    /// Pick a y in [1, max), guarding against the degenerate case where the
+    /// band is tiny (tiny terminal) so `random_range` doesn't panic.
+    fn random_sky_y(rng: &mut SmallRng, max_exclusive: f64) -> f64 {
+        let lo = 1.0_f64;
+        let hi = max_exclusive.max(lo + 0.001);
+        rng.random_range(lo..hi)
+    }
+
     fn spawn_cloud(&mut self, rng: &mut SmallRng) {
         if self.cloud_count() >= MAX_CLOUDS {
             return;
         }
         let idx = rng.random_range(0..self.art.clouds.len());
         let frames = self.art.clouds[idx].frames.clone();
-        let y = rng.random_range(1.0..(self.skyline_y as f64 * 0.35));
+        let colors = self.art.clouds[idx].colors.clone();
+        let y = Self::random_sky_y(rng, self.skyline_y as f64 * 0.35);
 
         let going_right = match self.cfg.cloud_direction {
             CloudDirection::Right => true,
             CloudDirection::Left => false,
-            CloudDirection::Both => rng.random_range(0..2_u32) == 0,
+            CloudDirection::Both => rng.random::<bool>(),
         };
 
         let speed = rng.random_range(3.0..8.0);
@@ -488,16 +542,10 @@ impl CityscapeScene {
             self.width as f64 + rng.random_range(5.0..25.0)
         };
 
-        let mut cloud = Entity::new(
-            x,
-            y,
-            frames,
-            1.0,
-            Style::default(),
-            OVERLAY,
-        );
+        let mut cloud = Entity::new(x, y, frames, 1.0, Style::default(), OVERLAY);
         cloud.vx = if going_right { speed } else { -speed };
         cloud.tag = TAG_CLOUD;
+        cloud.colors = colors;
         // Per-cloud brightness bias 0.75..1.0 so some clouds are dimmer
         cloud.meta = rng.random_range(0.75..1.0);
         self.entities.push(cloud);
@@ -505,16 +553,17 @@ impl CityscapeScene {
 
     fn spawn_plane(&mut self, rng: &mut SmallRng) {
         let idx = rng.random_range(0..self.art.planes.len());
-        let art_faces_right = idx == 2; // plane3 faces right, others face left
-        let going_right = rng.random_range(0..2_u32) == 0;
+        let plane_art = &self.art.planes[idx];
+        let going_right = rng.random::<bool>();
 
-        let frames = if going_right == art_faces_right {
-            self.art.planes[idx].frames.clone()
+        let frames = if going_right == plane_art.faces_right {
+            plane_art.data.frames.clone()
         } else {
-            crate::art::mirror_frames(&self.art.planes[idx].frames)
+            crate::art::mirror_frames(&plane_art.data.frames)
         };
+        let colors = plane_art.data.colors.clone();
 
-        let y = rng.random_range(2.0..(self.skyline_y as f64 * 0.3));
+        let y = Self::random_sky_y(rng, self.skyline_y as f64 * 0.3);
         let x = if going_right {
             -20.0
         } else {
@@ -522,7 +571,10 @@ impl CityscapeScene {
         };
 
         let mut plane = Entity::new(
-            x, y, frames, 0.5,
+            x,
+            y,
+            frames,
+            0.5,
             Style::default().fg(pick_vehicle_color(rng)),
             OVERLAY,
         );
@@ -532,6 +584,7 @@ impl CityscapeScene {
             -rng.random_range(12.0..20.0)
         };
         plane.tag = TAG_PLANE;
+        plane.colors = colors;
         plane.bob_amp = rng.random_range(0.4..1.0);
         plane.bob_freq = rng.random_range(0.4..0.9);
         plane.bob_phase = rng.random_range(0.0..std::f64::consts::TAU);
@@ -541,7 +594,7 @@ impl CityscapeScene {
     fn spawn_heli(&mut self, rng: &mut SmallRng) {
         let idx = rng.random_range(0..self.art.helis.len());
         // Both helis face left
-        let going_right = rng.random_range(0..2_u32) == 0;
+        let going_right = rng.random::<bool>();
 
         let frames = if going_right {
             // Art faces left, need mirror for going right
@@ -549,8 +602,9 @@ impl CityscapeScene {
         } else {
             self.art.helis[idx].frames.clone()
         };
+        let colors = self.art.helis[idx].colors.clone();
 
-        let y = rng.random_range(1.0..(self.skyline_y as f64 * 0.4));
+        let y = Self::random_sky_y(rng, self.skyline_y as f64 * 0.4);
         let x = if going_right {
             -20.0
         } else {
@@ -558,7 +612,10 @@ impl CityscapeScene {
         };
 
         let mut heli = Entity::new(
-            x, y, frames, 0.4,
+            x,
+            y,
+            frames,
+            0.4,
             Style::default().fg(pick_vehicle_color(rng)),
             OVERLAY,
         );
@@ -568,6 +625,7 @@ impl CityscapeScene {
             -rng.random_range(4.0..8.0)
         };
         heli.tag = TAG_HELI;
+        heli.colors = colors;
         heli.bob_amp = rng.random_range(0.6..1.2);
         heli.bob_freq = rng.random_range(0.8..1.4);
         heli.bob_phase = rng.random_range(0.0..std::f64::consts::TAU);
@@ -576,9 +634,9 @@ impl CityscapeScene {
 
     fn spawn_car(&mut self, rng: &mut SmallRng) {
         let idx = rng.random_range(0..self.art.cars.len());
-        let road_h = self.height - self.skyline_y;
+        let road_h = self.height.saturating_sub(self.skyline_y);
         let lane_mid = self.skyline_y + road_h / 2;
-        let going_right = rng.random_range(0..2_u32) == 0;
+        let going_right = rng.random::<bool>();
 
         // All car art faces right. Mirror for left-going lane.
         let frames = if going_right {
@@ -586,6 +644,7 @@ impl CityscapeScene {
         } else {
             crate::art::mirror_frames(&self.art.cars[idx].frames)
         };
+        let colors = self.art.cars[idx].colors.clone();
 
         // Top lane goes right, bottom lane goes left. Cars are ~4 rows tall.
         let y = if going_right {
@@ -601,27 +660,21 @@ impl CityscapeScene {
 
         let color = pick_vehicle_color(rng);
 
-        let mut car = Entity::new(
-            x,
-            y,
-            frames,
-            0.15,
-            Style::default().fg(color),
-            FG,
-        );
+        let mut car = Entity::new(x, y, frames, 0.15, Style::default().fg(color), FG);
         car.vx = if going_right {
             rng.random_range(5.0..12.0)
         } else {
             -rng.random_range(5.0..12.0)
         };
         car.tag = TAG_CAR;
+        car.colors = colors;
         self.entities.push(car);
     }
 
     fn spawn_birds(&mut self, rng: &mut SmallRng) {
         let flock_size = rng.random_range(2..5_u32);
-        let base_y = rng.random_range(3.0..(self.skyline_y as f64 * 0.5));
-        let going_right = rng.random_range(0..2_u32) == 0;
+        let base_y = Self::random_sky_y(rng, self.skyline_y as f64 * 0.5);
+        let going_right = rng.random::<bool>();
         let base_speed = rng.random_range(4.0..7.0);
         let base_x: f64 = if going_right {
             -5.0
@@ -630,6 +683,7 @@ impl CityscapeScene {
         };
         let bird_frames_right = self.art.bird.frames.clone();
         let bird_frames_left = crate::art::mirror_frames(&self.art.bird.frames);
+        let bird_colors = self.art.bird.colors.clone();
 
         // One color per flock so birds feel like a group
         let flock_color = pick_vehicle_color(rng);
@@ -658,6 +712,7 @@ impl CityscapeScene {
             bird.vx = if going_right { vx } else { -vx };
             bird.vy = rng.random_range(-0.1..0.1);
             bird.tag = TAG_BIRD;
+            bird.colors = bird_colors.clone();
             bird.bob_amp = rng.random_range(1.5..3.0);
             bird.bob_freq = flock_freq;
             // Offset phase so birds within a flock bob in a cascade
@@ -762,37 +817,37 @@ impl CityscapeScene {
 
 impl Scene for CityscapeScene {
     fn setup(width: u16, height: u16, cfg: &SceneConfig, rng: &mut SmallRng) -> Self {
-        // Road area: enough for two lanes of cars (~10 rows)
-        let road_rows = (height / 4).max(8).min(12);
-        let skyline_y = height - road_rows;
+        // Road area: enough for two lanes of cars (~10 rows). Clamped to
+        // avoid underflow on tiny terminals.
+        let (_road_rows, skyline_y) = compute_layout(height);
         let art = CityscapeArt::load();
 
-        let far_w = width + FAR_EXTRA;
-        let mid_w = width + MID_EXTRA;
+        let far_w = width.saturating_add(FAR_EXTRA);
+        let mid_w = width.saturating_add(MID_EXTRA);
 
-        // Singapore-style: tall skyscrapers, 40-80% of sky height
-        let far_buildings = Self::generate_buildings(
-            rng,
-            far_w as i32,
-            skyline_y as i32,
-            0.4,
-            0.85, // tall skyscrapers in distance
-            5,
-            12,
-            0,
-            2,
-        );
-        let mid_buildings = Self::generate_buildings(
-            rng,
-            mid_w as i32,
-            skyline_y as i32,
-            0.15,
-            0.4, // shorter buildings up front
-            7,
-            16,
-            1,
-            3,
-        );
+        // Singapore-style: tall skyscrapers, 40-85% of sky height
+        let far_params = BuildingGenParams {
+            layer_width: far_w as i32,
+            skyline_y: skyline_y as i32,
+            min_frac: 0.4,
+            max_frac: 0.85,
+            min_width: 5,
+            max_width: 12,
+            gap_min: 0,
+            gap_max: 2,
+        };
+        let mid_params = BuildingGenParams {
+            layer_width: mid_w as i32,
+            skyline_y: skyline_y as i32,
+            min_frac: 0.15,
+            max_frac: 0.4,
+            min_width: 7,
+            max_width: 16,
+            gap_min: 1,
+            gap_max: 3,
+        };
+        let far_buildings = Self::generate_buildings(rng, &far_params);
+        let mid_buildings = Self::generate_buildings(rng, &mid_params);
 
         let mut weather = match cfg.weather.as_deref() {
             Some(name) => {
@@ -891,15 +946,16 @@ impl Scene for CityscapeScene {
         // 5. Rooftop
         self.rooftop_layer.composite(buf, area);
 
-        // 6. Foreground entities (person)
+        // 6. Foreground entities (cars, person)
         self.scratch_layer.clear();
         for entity in &self.entities {
             if entity.layer == FG {
-                self.scratch_layer.draw_ascii(
+                self.scratch_layer.draw_ascii_styled(
                     entity.x as i32,
                     entity.y as i32,
                     entity.current_frame(),
                     entity.style,
+                    entity.colors.as_ref(),
                 );
             }
         }
@@ -920,11 +976,12 @@ impl Scene for CityscapeScene {
             } else {
                 entity.style
             };
-            self.scratch_layer.draw_ascii(
+            self.scratch_layer.draw_ascii_styled(
                 entity.x as i32,
                 entity.y as i32,
                 entity.current_frame(),
                 style,
+                entity.colors.as_ref(),
             );
         }
         self.scratch_layer.composite(buf, area);
@@ -940,11 +997,11 @@ impl Scene for CityscapeScene {
     fn resize(&mut self, width: u16, height: u16, rng: &mut SmallRng) {
         self.width = width;
         self.height = height;
-        let road_rows = (height / 4).max(8).min(12);
-        self.skyline_y = height - road_rows;
+        let (_road_rows, skyline_y) = compute_layout(height);
+        self.skyline_y = skyline_y;
 
-        let far_w = width + FAR_EXTRA;
-        let mid_w = width + MID_EXTRA;
+        let far_w = width.saturating_add(FAR_EXTRA);
+        let mid_w = width.saturating_add(MID_EXTRA);
 
         self.sky_layer = Layer::new(width, height);
         self.far_layer = Layer::new(far_w, height);
@@ -952,28 +1009,28 @@ impl Scene for CityscapeScene {
         self.rooftop_layer = Layer::new(width, height);
         self.scratch_layer = Layer::new(width, height);
 
-        self.far_buildings = Self::generate_buildings(
-            rng,
-            far_w as i32,
-            self.skyline_y as i32,
-            0.4,
-            0.85,
-            5,
-            12,
-            0,
-            2,
-        );
-        self.mid_buildings = Self::generate_buildings(
-            rng,
-            mid_w as i32,
-            self.skyline_y as i32,
-            0.15,
-            0.4,
-            7,
-            16,
-            1,
-            3,
-        );
+        let far_params = BuildingGenParams {
+            layer_width: far_w as i32,
+            skyline_y: self.skyline_y as i32,
+            min_frac: 0.4,
+            max_frac: 0.85,
+            min_width: 5,
+            max_width: 12,
+            gap_min: 0,
+            gap_max: 2,
+        };
+        let mid_params = BuildingGenParams {
+            layer_width: mid_w as i32,
+            skyline_y: self.skyline_y as i32,
+            min_frac: 0.15,
+            max_frac: 0.4,
+            min_width: 7,
+            max_width: 16,
+            gap_min: 1,
+            gap_max: 3,
+        };
+        self.far_buildings = Self::generate_buildings(rng, &far_params);
+        self.mid_buildings = Self::generate_buildings(rng, &mid_params);
 
         self.build_sky();
         self.build_far_skyline();

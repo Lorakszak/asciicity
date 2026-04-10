@@ -19,8 +19,10 @@ pub struct Entity {
     frame_timer: f64,
     /// Style for rendering
     pub style: Style,
-    /// Per-character color overrides (from .colors or .colormap files)
-    #[allow(dead_code)]
+    /// Per-character color overrides (from .colors or .colormap files).
+    /// When set, the scene render pass should route this entity through
+    /// `Layer::draw_ascii_styled` so per-char colors apply on top of
+    /// `style`.
     pub colors: Option<ColorMap>,
     /// Whether this entity should be removed
     pub alive: bool,

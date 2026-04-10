@@ -6,9 +6,7 @@ pub struct SceneInfo {
     pub description: &'static str,
 }
 
-pub const SCENES: &[SceneInfo] = &[
-    SceneInfo {
-        name: "cityscape",
-        description: "Rooftop view of a city skyline at night",
-    },
-];
+pub const SCENES: &[SceneInfo] = &[SceneInfo {
+    name: "cityscape",
+    description: "Rooftop view of a city skyline at night",
+}];
