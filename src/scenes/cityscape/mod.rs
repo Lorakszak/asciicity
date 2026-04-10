@@ -616,7 +616,7 @@ impl CityscapeScene {
             x,
             y,
             frames,
-            1.0,
+            0.15,
             Style::default().fg(color),
             FG,
         );
