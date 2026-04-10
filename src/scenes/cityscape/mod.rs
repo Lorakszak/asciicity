@@ -167,6 +167,7 @@ fn weather_from_name(name: &str) -> WeatherType {
         "rain" => WeatherType::Rain,
         "snow" => WeatherType::Snow,
         "fog" => WeatherType::Fog,
+        "thunder" => WeatherType::Thunder,
         _ => WeatherType::Clear,
     }
 }

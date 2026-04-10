@@ -10,6 +10,7 @@ pub enum WeatherType {
     Rain,
     Snow,
     Fog,
+    Thunder,
 }
 
 struct Particle {
@@ -21,6 +22,15 @@ struct Particle {
     style: Style,
 }
 
+/// An active lightning strike: zigzag segments + age driving flash intensity.
+struct Bolt {
+    cells: Vec<(u16, u16, char)>,
+    age: f64,
+}
+
+const BOLT_LIFETIME: f64 = 0.22;
+const BOLT_FLASH_PHASE: f64 = 0.08;
+
 /// Weather particle system. Spawns and manages rain, snow, or fog particles.
 pub struct Weather {
     weather_type: WeatherType,
@@ -28,6 +38,9 @@ pub struct Weather {
     particles: Vec<Particle>,
     spawn_timer: f64,
     spawn_interval: f64,
+    strike_timer: f64,
+    strike_next: f64,
+    bolt: Option<Bolt>,
 }
 
 impl Weather {
@@ -38,6 +51,9 @@ impl Weather {
             particles: Vec::new(),
             spawn_timer: 0.0,
             spawn_interval: Self::calc_interval(weather_type, intensity),
+            strike_timer: 0.0,
+            strike_next: 3.0,
+            bolt: None,
         }
     }
 
@@ -49,6 +65,8 @@ impl Weather {
         self.weather_type = weather_type;
         self.intensity = intensity;
         self.spawn_interval = Self::calc_interval(weather_type, intensity);
+        self.bolt = None;
+        self.strike_timer = 0.0;
         if weather_type == WeatherType::Clear {
             self.particles.clear();
         }
@@ -61,6 +79,7 @@ impl Weather {
             WeatherType::Rain => 0.02 / base,
             WeatherType::Snow => 0.1 / base,
             WeatherType::Fog => 0.3 / base,
+            WeatherType::Thunder => 0.015 / base,
         }
     }
 
@@ -91,6 +110,58 @@ impl Weather {
         let h = height as f64;
         self.particles
             .retain(|p| p.y < h && p.x >= -1.0 && p.x < w + 1.0);
+
+        if self.weather_type == WeatherType::Thunder {
+            self.tick_thunder(dt, rng, width, height);
+        }
+    }
+
+    fn tick_thunder(&mut self, dt: f64, rng: &mut SmallRng, width: u16, height: u16) {
+        if let Some(bolt) = &mut self.bolt {
+            bolt.age += dt;
+            if bolt.age >= BOLT_LIFETIME {
+                self.bolt = None;
+            }
+        }
+
+        if self.bolt.is_none() {
+            self.strike_timer += dt;
+            if self.strike_timer >= self.strike_next {
+                self.strike_timer = 0.0;
+                let base = self.intensity.max(0.1);
+                self.strike_next = rng.random_range(2.5..7.0) / base;
+                self.bolt = Some(Self::generate_bolt(rng, width, height));
+            }
+        }
+    }
+
+    fn generate_bolt(rng: &mut SmallRng, width: u16, height: u16) -> Bolt {
+        let mut cells = Vec::new();
+        let margin = (width / 6).max(1) as i32;
+        let mut x: i32 = rng.random_range(margin..(width as i32 - margin).max(margin + 1));
+        let max_y = ((height as f64 * 0.55) as i32).max(4);
+        for y in 0..max_y {
+            let dx: i32 = rng.random_range(-1..=1);
+            let ch = match dx {
+                d if d < 0 => '/',
+                d if d > 0 => '\\',
+                _ => '|',
+            };
+            if x >= 0 && (x as u16) < width {
+                cells.push((x as u16, y as u16, ch));
+                if rng.random_range(0.0..1.0) < 0.35 && (x as u16 + 1) < width {
+                    cells.push(((x + 1) as u16, y as u16, '\\'));
+                }
+            }
+            x += dx;
+            if x < 0 {
+                x = 0;
+            }
+            if x >= width as i32 {
+                x = width as i32 - 1;
+            }
+        }
+        Bolt { cells, age: 0.0 }
     }
 
     fn spawn_particle(
@@ -112,6 +183,17 @@ impl Weather {
                     wind_x * 2.0 + rng.random_range(-0.5..0.5),
                     rng.random_range(15.0..25.0),
                     Style::default().fg(Color::Rgb(100, 130, 180)),
+                    rng.random_range(0.0..width as f64),
+                    -1.0,
+                )
+            }
+            WeatherType::Thunder => {
+                let ch = RAIN_CHARS[rng.random_range(0..RAIN_CHARS.len())];
+                (
+                    ch,
+                    wind_x * 2.5 + rng.random_range(-0.7..0.7),
+                    rng.random_range(18.0..30.0),
+                    Style::default().fg(Color::Rgb(120, 140, 180)),
                     rng.random_range(0.0..width as f64),
                     -1.0,
                 )
@@ -153,9 +235,33 @@ impl Weather {
 
     /// Render weather particles onto a layer.
     pub fn render(&self, layer: &mut Layer) {
+        if let Some(bolt) = &self.bolt
+            && bolt.age < BOLT_FLASH_PHASE
+        {
+            let t = 1.0 - (bolt.age / BOLT_FLASH_PHASE);
+            let lum = (180.0 * t) as u8;
+            let bg = Color::Rgb(lum, lum, lum.saturating_add(20));
+            let flash_style = Style::default().bg(bg);
+            let flash_rows = (layer.height as f64 * 0.55) as u16;
+            for y in 0..flash_rows {
+                for x in 0..layer.width {
+                    layer.set(x, y, ' ', flash_style);
+                }
+            }
+        }
+
         for p in &self.particles {
             if p.x >= 0.0 && p.y >= 0.0 {
                 layer.set(p.x as u16, p.y as u16, p.ch, p.style);
+            }
+        }
+
+        if let Some(bolt) = &self.bolt {
+            let fade = 1.0 - (bolt.age / BOLT_LIFETIME).clamp(0.0, 1.0);
+            let lum = (200.0 + 55.0 * fade) as u8;
+            let bolt_style = Style::default().fg(Color::Rgb(lum, lum, 150));
+            for (x, y, ch) in &bolt.cells {
+                layer.set(*x, *y, *ch, bolt_style);
             }
         }
     }

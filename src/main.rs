@@ -82,6 +82,7 @@ enum WeatherArg {
     Rain,
     Snow,
     Fog,
+    Thunder,
 }
 
 impl WeatherArg {
@@ -91,6 +92,7 @@ impl WeatherArg {
             WeatherArg::Rain => "rain",
             WeatherArg::Snow => "snow",
             WeatherArg::Fog => "fog",
+            WeatherArg::Thunder => "thunder",
         }
     }
 }
