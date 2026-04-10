@@ -47,7 +47,7 @@ Rendering:
 - **Entity** - position/velocity/frames/style + `tag: u32` (scene-defined type discriminator), `meta: f64` (per-entity scalar, e.g. cloud brightness bias), and `bob_amp/freq/phase` for sinusoidal vertical motion on top of `vy` drift.
 - **Color** (`color.rs`) - `ColorMap` enum (Palette/Grid), color math utilities (lerp, tint, fade), format parsers
 - **Effects** (`effects.rs`) - post-compositing buffer modifications (radial glow, vertical fade)
-- **Behaviors** (`behavior/`) - wind, day/night, parallax, weather systems. Scenes opt-in by embedding and ticking them.
+- **Behaviors** (`behavior/`) - wind, day/night, parallax, weather systems. Scenes opt-in by embedding and ticking them. `Weather` supports `Rain`, `Snow`, `Fog`, and `Thunder` (rain particles + periodic lightning bolts with sky flash).
 
 Scenes own their layers, entities, spawners, behavior system instances, and a cloned `SceneConfig`.
 
@@ -58,13 +58,15 @@ cargo run                                              # run default scene (city
 cargo run -- --list                                    # list scenes
 cargo run -- -s cityscape --fps 15                     # pick scene + fps
 cargo run -- --car-rate 3 --weather rain               # busier cars + rain
+cargo run -- --weather thunder                         # thunderstorm with lightning
+cargo run -- --cloud-direction left                    # clouds drift right-to-left only
 cargo run -- --time-speed 2 --start-time 5             # fast day/night starting at sunrise
 cargo install --path .                                 # install system-wide
 ```
 
 Full invocation with every flag explicit at its default:
 ```bash
-cargo run -- --scene cityscape --fps 15 --cloud-rate 1.0 --plane-rate 1.0 --heli-rate 1.0 --bird-rate 1.0 --car-rate 1.0 --weather-intensity 1.0 --time-speed 0.2 --start-time 20.0
+cargo run -- --scene cityscape --fps 15 --cloud-rate 1.0 --plane-rate 1.0 --heli-rate 1.0 --bird-rate 1.0 --car-rate 1.0 --cloud-direction both --weather-intensity 1.0 --time-speed 0.2 --start-time 20.0
 ```
 
 Press any key to exit.
@@ -86,6 +88,7 @@ Press any key to exit.
 - Entity `tag`/`meta` are the generic way to discriminate and parameterize entities. Use them instead of stuffing state into `frame_interval` or cloning sibling Vecs.
 - Flying entities (planes, helis, birds) should set `bob_amp/freq/phase` so they don't travel in flat lines.
 - Vehicle-like entities share the 9-color palette in `cityscape/mod.rs::VEHICLE_PALETTE` via `pick_vehicle_color`.
+- Direction-aware entities (clouds, birds, planes, helis, cars) must spawn both directions when their config allows it: random `going_right`, mirror art via `art::mirror_frames` if the source faces the wrong way, and flip the sign of `vx`.
 - New scenes that take runtime options should read them from the `&SceneConfig` passed to `setup()`, clone it into the scene struct, and use `scene::scale_interval` when computing spawn delays so `--*-rate 0` disables that entity cleanly.
 
 ## Adding a New Scene
