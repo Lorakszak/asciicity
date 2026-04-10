@@ -26,6 +26,18 @@ pub struct Entity {
     pub alive: bool,
     /// Which layer this entity renders to (0 = background, 3 = overlay)
     pub layer: usize,
+    /// Scene-defined type discriminator (0 = untagged).
+    pub tag: u32,
+    /// Scene-defined per-entity scalar (e.g. cloud brightness variation).
+    pub meta: f64,
+    /// Sinusoidal vertical bob amplitude in cells (0 = no bobbing).
+    pub bob_amp: f64,
+    /// Bob frequency in radians/sec.
+    pub bob_freq: f64,
+    /// Phase offset so a flock doesn't bob in lockstep.
+    pub bob_phase: f64,
+    /// Accumulated time used as the bob input.
+    bob_t: f64,
 }
 
 impl Entity {
@@ -50,6 +62,12 @@ impl Entity {
             colors: None,
             alive: true,
             layer,
+            tag: 0,
+            meta: 0.0,
+            bob_amp: 0.0,
+            bob_freq: 0.0,
+            bob_phase: 0.0,
+            bob_t: 0.0,
         }
     }
 
@@ -65,10 +83,19 @@ impl Entity {
         }
     }
 
-    /// Move by velocity * dt.
+    /// Move by velocity * dt, applying sinusoidal vertical bob if configured.
+    /// vy drives base drift; bob adds an oscillation on top without disturbing
+    /// the base position, so the bob doesn't accumulate.
     pub fn tick_movement(&mut self, dt: f64) {
         self.x += self.vx * dt;
         self.y += self.vy * dt;
+
+        if self.bob_amp != 0.0 {
+            let prev_bob = self.bob_amp * (self.bob_freq * self.bob_t + self.bob_phase).sin();
+            self.bob_t += dt;
+            let next_bob = self.bob_amp * (self.bob_freq * self.bob_t + self.bob_phase).sin();
+            self.y += next_bob - prev_bob;
+        }
     }
 
     /// Get current ASCII art frame.
