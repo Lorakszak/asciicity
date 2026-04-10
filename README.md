@@ -1,8 +1,8 @@
-# Bootiful
+# Terminart
 
 Terminal ambiance engine - beautiful ASCII art scenes for your terminal.
 
-Bootiful displays procedurally generated, animated ASCII art scenes directly in your terminal. Think of it as a screensaver for your shell - city skylines with blinking windows, drifting clouds, planes, and cars.
+Terminart displays procedurally generated, animated ASCII art scenes directly in your terminal. Think of it as a screensaver for your shell - city skylines with blinking windows, drifting clouds, planes, and cars.
 
 ## Features
 
@@ -10,7 +10,7 @@ Bootiful displays procedurally generated, animated ASCII art scenes directly in 
 - Layered rendering with transparent compositing and parallax scrolling
 - Entity system with animated sprites, spawners, and auto-mirroring
 - Behavior systems: wind, day/night cycle, weather, parallax
-- External art files with user override support (`~/.config/bootiful/`)
+- External art files with user override support (`~/.config/terminart/`)
 - Per-character coloring via `.colors` palette or `.colormap` positional grid
 - Post-compositing effects (glow, fade)
 - Smooth day/night color transitions
@@ -22,8 +22,8 @@ Bootiful displays procedurally generated, animated ASCII art scenes directly in 
 Requires [Rust](https://rustup.rs/) toolchain.
 
 ```bash
-git clone https://github.com/Lorakszak/Bootiful.git
-cd Bootiful
+git clone https://github.com/Lorakszak/Terminart.git
+cd Terminart
 cargo install --path .
 ```
 
@@ -31,23 +31,23 @@ Or build manually:
 
 ```bash
 cargo build --release
-cp target/release/bootiful ~/.local/bin/
+cp target/release/terminart ~/.local/bin/
 ```
 
 ## Usage
 
 ```bash
 # Run default scene (cityscape)
-bootiful
+terminart
 
 # Run a specific scene
-bootiful --scene cityscape
+terminart --scene cityscape
 
 # List available scenes
-bootiful --list
+terminart --list
 
 # Adjust frame rate
-bootiful --fps 10
+terminart --fps 10
 ```
 
 Press any key to exit.
@@ -57,7 +57,7 @@ Press any key to exit.
 Add to your `~/.zshrc` or `~/.bashrc`:
 
 ```bash
-bootiful
+terminart
 ```
 
 ## Available Scenes
@@ -69,7 +69,7 @@ bootiful
 ## Roadmap
 
 ### ~~Phase 1: Art loading from external files~~ (done)
-Art loaded from `.txt` files in `assets/`, embedded via `include_str!` at compile time. User overrides supported from `~/.config/bootiful/scenes/`.
+Art loaded from `.txt` files in `assets/`, embedded via `include_str!` at compile time. User overrides supported from `~/.config/terminart/scenes/`.
 
 ### ~~Phase 2: Color and shading improvements~~ (done)
 Color infrastructure: per-character coloring via `.colors` (char-based palette) and `.colormap` (positional grid) files. Color utilities (lerp, tint, fade). Post-compositing buffer effects (radial glow, vertical fade).

@@ -15,7 +15,7 @@ use clap::{Parser, ValueEnum};
 
 #[derive(Parser)]
 #[command(
-    name = "bootiful",
+    name = "terminart",
     version,
     about = "Terminal ambiance engine - beautiful ASCII art scenes"
 )]

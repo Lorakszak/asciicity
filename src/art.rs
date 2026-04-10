@@ -29,7 +29,7 @@ pub fn parse_frames(content: &str) -> Vec<String> {
 }
 
 /// Load art data for a scene asset.
-/// Checks ~/.config/bootiful/scenes/ for user overrides (art, colors, colormap),
+/// Checks ~/.config/terminart/scenes/ for user overrides (art, colors, colormap),
 /// falls back to compiled-in defaults.
 pub fn load(scene: &str, name: &str, default_art: &str) -> ArtData {
     // Load art frames
@@ -102,9 +102,9 @@ pub fn mirror_frames(frames: &[String]) -> Vec<String> {
 
 fn config_dir() -> Option<PathBuf> {
     if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME") {
-        Some(PathBuf::from(xdg).join("bootiful"))
+        Some(PathBuf::from(xdg).join("terminart"))
     } else if let Ok(home) = std::env::var("HOME") {
-        Some(PathBuf::from(home).join(".config").join("bootiful"))
+        Some(PathBuf::from(home).join(".config").join("terminart"))
     } else {
         None
     }

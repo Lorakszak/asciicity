@@ -1,4 +1,4 @@
-# Bootiful - Claude Code Instructions
+# Terminart - Claude Code Instructions
 
 ## Project Overview
 Terminal ambiance engine in Rust. Displays procedurally generated ASCII art scenes with animated entities. Current scene: cityscape (rooftop city skyline with buildings, traffic, planes, weather).
@@ -18,7 +18,7 @@ CLI (main.rs) -> Engine (engine.rs) -> Scene trait (scene.rs)
 
 Art pipeline:
   assets/<scene>/*.txt  --include_str!-->  art.rs (defaults)
-  ~/.config/bootiful/   --runtime load-->  art.rs (overrides)
+  ~/.config/terminart/   --runtime load-->  art.rs (overrides)
        |
        v
   ArtData { frames: Vec<String>, colors: Option<ColorMap> }
@@ -69,7 +69,7 @@ Press any key to exit.
 - Multi-frame animations use `---` line separator in `.txt` files
 - Optional `.colors` files map characters to hex colors (e.g. `O #FFD700`)
 - Optional `.colormap` files provide positional color grids (`@palette` + `@map` sections)
-- User overrides go in `~/.config/bootiful/scenes/<scene>/` (same filenames)
+- User overrides go in `~/.config/terminart/scenes/<scene>/` (same filenames)
 - Scratch layers are pre-allocated and reused via `.clear()`, never allocated per-frame
 - `art::mirror_horizontal()` flips art left/right for entities traveling the opposite direction
 - ASCII art reference sites listed in `docs/ascii-art-resources.md` (gitignored, local only)
