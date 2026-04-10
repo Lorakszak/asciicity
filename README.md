@@ -7,13 +7,16 @@ Terminart displays procedurally generated, animated ASCII art scenes directly in
 ## Features
 
 - Procedurally generated scenes (never the same twice)
-- Layered rendering with transparent compositing and parallax scrolling
-- Entity system with animated sprites, spawners, and auto-mirroring
+- Layered rendering with transparent compositing and wide-world parallax scrolling
+- Entity system with multi-frame sprites, auto-mirroring, and sinusoidal bobbing for flying things
 - Behavior systems: wind, day/night cycle, weather, parallax
+- Shared 9-color vehicle palette (planes, helicopters, cars, bird flocks)
+- Clouds re-tinted each frame to track the day/night cycle
+- Multi-frame car animations (rolling wheels)
+- Configurable spawn rates, weather, and day/night speed via CLI
 - External art files with user override support (`~/.config/terminart/`)
 - Per-character coloring via `.colors` palette or `.colormap` positional grid
 - Post-compositing effects (glow, fade)
-- Smooth day/night color transitions
 - Lightweight (~15 FPS, minimal CPU usage)
 - Press any key to exit
 
@@ -48,6 +51,39 @@ terminart --list
 
 # Adjust frame rate
 terminart --fps 10
+
+# Busier city: more cars, less frequent planes, rainy weather
+terminart --car-rate 3 --plane-rate 0.3 --weather rain
+
+# Fast-forward the day/night cycle and start at sunrise
+terminart --time-speed 2 --start-time 5
+```
+
+### All flags
+
+| Flag | Default | Description |
+|---|---|---|
+| `-s, --scene <SCENE>` | `cityscape` | Scene to display |
+| `-l, --list` | | List available scenes |
+| `--fps <N>` | `15` | Target frames per second |
+| `--cloud-rate <N>` | `1.0` | Cloud spawn multiplier (0 = off) |
+| `--plane-rate <N>` | `1.0` | Plane spawn multiplier |
+| `--heli-rate <N>` | `1.0` | Helicopter spawn multiplier |
+| `--bird-rate <N>` | `1.0` | Bird flock spawn multiplier |
+| `--car-rate <N>` | `1.0` | Car spawn multiplier |
+| `--weather <TYPE>` | | `clear`, `rain`, `snow`, `fog` |
+| `--weather-intensity <N>` | `1.0` | Weather intensity (0.1..3.0) |
+| `--time-speed <N>` | `0.2` | In-game hours per real second |
+| `--start-time <N>` | `20.0` | Starting hour of day (0..24) |
+| `-h, --help` | | Print help |
+| `-V, --version` | | Print version |
+
+Rate multipliers scale spawn intervals inversely: `2.0` is twice as often, `0.5` is half as often, `0.0` disables that entity entirely.
+
+Full invocation with every flag explicit at its default:
+
+```bash
+cargo run -- --scene cityscape --fps 15 --cloud-rate 1.0 --plane-rate 1.0 --heli-rate 1.0 --bird-rate 1.0 --car-rate 1.0 --weather-intensity 1.0 --time-speed 0.2 --start-time 20.0
 ```
 
 Press any key to exit.

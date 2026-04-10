@@ -12,9 +12,9 @@ Terminal ambiance engine in Rust. Displays procedurally generated ASCII art scen
 
 ## Architecture
 ```
-CLI (main.rs) -> Engine (engine.rs) -> Scene trait (scene.rs)
-                                          |
-                                    CityscapeScene (scenes/cityscape/)
+CLI (main.rs) -> SceneConfig -> Engine (engine.rs) -> Scene trait (scene.rs)
+                                                          |
+                                                    CityscapeScene (scenes/cityscape/)
 
 Art pipeline:
   assets/<scene>/*.txt  --include_str!-->  art.rs (defaults)
@@ -40,25 +40,33 @@ Rendering:
   Layer compositing (back-to-front, with parallax offsets) -> Buffer effects (glow, fade)
 ```
 
-- **Engine** - main loop: poll input, tick scene, render via ratatui, sleep
-- **Scene trait** - `setup()`, `tick(dt, rng)`, `render(frame)`, `resize()`
+- **Engine** - main loop: poll input, tick scene, render via ratatui, sleep. Takes a `SceneConfig` and passes it to `Scene::setup`.
+- **Scene trait** - `setup(width, height, cfg, rng)`, `tick(dt, rng)`, `render(frame)`, `resize()`. `SceneConfig` carries CLI spawn-rate multipliers, weather override, and day/night time settings. Scenes store their config so `resize()` can re-apply it.
 - **Art loader** (`art.rs`) - loads art from embedded defaults or user overrides, returns `ArtData`. `mirror_horizontal()` flips art for direction-aware entities.
-- **Layer** - 2D grid of optional styled cells, composited back-to-front; `draw_ascii_styled()` for per-character coloring; `composite_offset()` for parallax
-- **Entity** - animated object with position, velocity, art frames, optional `ColorMap`, layer assignment
+- **Layer** - 2D grid of optional styled cells, composited back-to-front. `composite_offset()` iterates the full layer dimensions (not screen-clamped) so wide parallax layers draw their off-screen content when panned into view.
+- **Entity** - position/velocity/frames/style + `tag: u32` (scene-defined type discriminator), `meta: f64` (per-entity scalar, e.g. cloud brightness bias), and `bob_amp/freq/phase` for sinusoidal vertical motion on top of `vy` drift.
 - **Color** (`color.rs`) - `ColorMap` enum (Palette/Grid), color math utilities (lerp, tint, fade), format parsers
 - **Effects** (`effects.rs`) - post-compositing buffer modifications (radial glow, vertical fade)
 - **Behaviors** (`behavior/`) - wind, day/night, parallax, weather systems. Scenes opt-in by embedding and ticking them.
 
-Scenes own their layers, entities, spawners, and behavior system instances.
+Scenes own their layers, entities, spawners, behavior system instances, and a cloned `SceneConfig`.
 
 ## Building and Running
 ```bash
-cargo build           # build
-cargo run             # run default scene (cityscape)
-cargo run -- --list   # list scenes
-cargo run -- -s cityscape --fps 15
-cargo install --path . # install system-wide
+cargo build                                            # build
+cargo run                                              # run default scene (cityscape)
+cargo run -- --list                                    # list scenes
+cargo run -- -s cityscape --fps 15                     # pick scene + fps
+cargo run -- --car-rate 3 --weather rain               # busier cars + rain
+cargo run -- --time-speed 2 --start-time 5             # fast day/night starting at sunrise
+cargo install --path .                                 # install system-wide
 ```
+
+Full invocation with every flag explicit at its default:
+```bash
+cargo run -- --scene cityscape --fps 15 --cloud-rate 1.0 --plane-rate 1.0 --heli-rate 1.0 --bird-rate 1.0 --car-rate 1.0 --weather-intensity 1.0 --time-speed 0.2 --start-time 20.0
+```
+
 Press any key to exit.
 
 ## Conventions
@@ -75,6 +83,10 @@ Press any key to exit.
 - ASCII art reference sites listed in `docs/ascii-art-resources.md` (gitignored, local only)
 - Parallax layers must have enough extra width for at least 100px of max shift on the nearest parallax layer. Far layers scale proportionally by depth ratio. Use large PARALLAX_RANGE (~200) for noticeable drift.
 - Building colors must use `lerp_rgb` for smooth day/night transitions, never binary if/else
+- Entity `tag`/`meta` are the generic way to discriminate and parameterize entities. Use them instead of stuffing state into `frame_interval` or cloning sibling Vecs.
+- Flying entities (planes, helis, birds) should set `bob_amp/freq/phase` so they don't travel in flat lines.
+- Vehicle-like entities share the 9-color palette in `cityscape/mod.rs::VEHICLE_PALETTE` via `pick_vehicle_color`.
+- New scenes that take runtime options should read them from the `&SceneConfig` passed to `setup()`, clone it into the scene struct, and use `scene::scale_interval` when computing spawn delays so `--*-rate 0` disables that entity cleanly.
 
 ## Adding a New Scene
 1. Create art files in `assets/<name>/` (`.txt`, optional `.colors`/`.colormap`)
