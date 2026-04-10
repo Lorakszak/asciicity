@@ -1,4 +1,3 @@
-pub const PERSON_TABLE_DEFAULT: &str = include_str!("../../../assets/cityscape/person_table.txt");
 pub const CLOUD_SMALL_DEFAULT: &str = include_str!("../../../assets/cityscape/cloud_small.txt");
 pub const CLOUD_LARGE_DEFAULT: &str = include_str!("../../../assets/cityscape/cloud_large.txt");
 pub const CLOUD_WISPY_DEFAULT: &str = include_str!("../../../assets/cityscape/cloud_wispy.txt");

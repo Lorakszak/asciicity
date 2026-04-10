@@ -24,7 +24,6 @@ const TAG_PLANE: u32 = 2;
 const TAG_HELI: u32 = 3;
 const TAG_BIRD: u32 = 4;
 const TAG_CAR: u32 = 5;
-const TAG_SMOKE: u32 = 6;
 
 // Parallax
 // Range/speed give ~2 minute full ping-pong sweep. Extras must cover the max
@@ -80,7 +79,6 @@ struct Star {
 }
 
 struct CityscapeArt {
-    person_table: crate::art::ArtData,
     clouds: Vec<crate::art::ArtData>,
     planes: Vec<crate::art::ArtData>,
     helis: Vec<crate::art::ArtData>,
@@ -91,11 +89,6 @@ struct CityscapeArt {
 impl CityscapeArt {
     fn load() -> Self {
         Self {
-            person_table: crate::art::load(
-                "cityscape",
-                "person_table",
-                art::PERSON_TABLE_DEFAULT,
-            ),
             clouds: vec![
                 crate::art::load("cityscape", "cloud_small", art::CLOUD_SMALL_DEFAULT),
                 crate::art::load("cityscape", "cloud_large", art::CLOUD_LARGE_DEFAULT),
@@ -163,10 +156,6 @@ pub struct CityscapeScene {
     bird_next: f64,
     car_timer: f64,
     car_next: f64,
-    smoke_timer: f64,
-    smoke_next: f64,
-    person_x: f64,
-    person_y: f64,
 
     cfg: SceneConfig,
 
@@ -468,19 +457,6 @@ impl CityscapeScene {
     fn setup_entities(&mut self, rng: &mut SmallRng) {
         self.entities.clear();
 
-        // Person at table on right side
-        self.person_x = self.width as f64 - 14.0;
-        self.person_y = self.skyline_y as f64 - 5.0;
-        let person = Entity::new(
-            self.person_x,
-            self.person_y,
-            self.art.person_table.frames.clone(),
-            4.0,
-            Style::default().fg(Color::Rgb(170, 160, 150)),
-            FG,
-        );
-        self.entities.push(person);
-
         // Initial clouds (2)
         self.spawn_cloud(rng);
         self.spawn_cloud(rng);
@@ -671,8 +647,6 @@ impl CityscapeScene {
     }
 
     fn tick_spawners(&mut self, dt: f64, rng: &mut SmallRng) {
-        let wind = self.wind.force_x();
-
         // Clouds - spawn 1-5 at once, sometimes clumped
         self.cloud_timer += dt;
         if self.cloud_timer >= self.cloud_next {
@@ -726,35 +700,11 @@ impl CityscapeScene {
             }
         }
 
-        // Cigarette smoke from person
-        self.smoke_timer += dt;
-        if self.smoke_timer >= self.smoke_next {
-            self.smoke_timer = 0.0;
-            self.smoke_next = rng.random_range(0.4..1.2);
-
-            let smoke_chars = ['~', '.', '\'', ','];
-            let ch = smoke_chars[rng.random_range(0..smoke_chars.len())];
-            let mut smoke = Entity::new(
-                self.person_x + 7.5,
-                self.person_y + 1.0,
-                vec![String::from(ch)],
-                0.3, // tag distinguisher
-                Style::default().fg(Color::Rgb(90, 90, 100)),
-                OVERLAY,
-            );
-            smoke.vy = rng.random_range(-1.5..-0.5);
-            smoke.vx = wind * 0.8 + rng.random_range(-0.2..0.5);
-            smoke.tag = TAG_SMOKE;
-            self.entities.push(smoke);
-        }
-
-        // Kill off-screen entities
+        // Kill off-screen entities (clouds, planes, birds, and cars)
         let w = self.width as f64;
         for entity in &mut self.entities {
-            if entity.layer == OVERLAY {
-                if entity.x > w + 30.0 || entity.x < -30.0 || entity.y < -5.0 {
-                    entity.alive = false;
-                }
+            if entity.x > w + 40.0 || entity.x < -40.0 || entity.y < -5.0 {
+                entity.alive = false;
             }
         }
     }
@@ -852,10 +802,6 @@ impl Scene for CityscapeScene {
             bird_next: scale_interval(rng.random_range(10.0..25.0), cfg.bird_rate),
             car_timer: 0.0,
             car_next: scale_interval(rng.random_range(1.0..3.0), cfg.car_rate),
-            smoke_timer: 0.0,
-            smoke_next: rng.random_range(0.4..1.2),
-            person_x: 0.0,
-            person_y: 0.0,
             cfg: cfg.clone(),
             art,
         };
