@@ -100,8 +100,13 @@ impl Entity {
         }
     }
 
-    /// Get current ASCII art frame.
+    /// Get current ASCII art frame. Returns an empty string if the entity has
+    /// no frames (user-defined scenes may construct entities before their art
+    /// loads), so the render pass degrades to a no-op instead of panicking.
     pub fn current_frame(&self) -> &str {
-        &self.frames[self.frame_idx]
+        self.frames
+            .get(self.frame_idx)
+            .map(String::as_str)
+            .unwrap_or("")
     }
 }

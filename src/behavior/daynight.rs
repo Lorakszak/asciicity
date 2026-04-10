@@ -49,7 +49,15 @@ impl DayNight {
             let (t0, (r0, g0, b0)) = SKY_KEYFRAMES[i];
             let (t1, (r1, g1, b1)) = SKY_KEYFRAMES[i + 1];
             if self.time >= t0 && self.time <= t1 {
-                let t = (self.time - t0) / (t1 - t0);
+                // Guard against duplicate-timestamp keyframes (would divide
+                // by zero). Hardcoded SKY_KEYFRAMES are distinct today, but
+                // user-defined scenes may eventually supply their own.
+                let span = t1 - t0;
+                let t = if span > 0.0 {
+                    (self.time - t0) / span
+                } else {
+                    0.0
+                };
                 return lerp_rgb(Color::Rgb(r0, g0, b0), Color::Rgb(r1, g1, b1), t);
             }
         }

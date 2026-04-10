@@ -208,7 +208,10 @@ impl Weather {
                     rng.random_range(0.0..height as f64),
                 )
             }
-            WeatherType::Clear => unreachable!(),
+            // `tick` already early-returns on Clear before reaching here,
+            // but honour the "no panic" convention and bail safely if that
+            // invariant ever breaks.
+            WeatherType::Clear => return,
         };
 
         self.particles.push(Particle {

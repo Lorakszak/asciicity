@@ -122,7 +122,10 @@ pub fn parse_colormap(content: &str) -> Option<ColorMap> {
 /// Parse a hex color string like "#FF8000" into Color::Rgb.
 pub fn parse_hex_color(s: &str) -> Option<Color> {
     let s = s.strip_prefix('#')?;
-    if s.len() != 6 {
+    // `len()` counts bytes; require pure ASCII so direct byte slicing at
+    // 0..2 / 2..4 / 4..6 lands on char boundaries. Without the ASCII check,
+    // a 6-byte string like "aéaa" would panic inside the slice expressions.
+    if s.len() != 6 || !s.is_ascii() {
         return None;
     }
     let r = u8::from_str_radix(&s[0..2], 16).ok()?;
@@ -178,6 +181,12 @@ mod tests {
         assert_eq!(parse_hex_color("#FF80"), None); // too short
         assert_eq!(parse_hex_color("#GG8000"), None); // non-hex
         assert_eq!(parse_hex_color("#FF800000"), None); // too long
+    }
+
+    #[test]
+    fn parse_hex_color_rejects_multibyte_chars() {
+        // 6 bytes but contains a 2-byte char; naive byte slicing would panic.
+        assert_eq!(parse_hex_color("#aéaa"), None);
     }
 
     #[test]
