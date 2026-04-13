@@ -1,34 +1,31 @@
-# Terminart
+# asciicity
 
-Terminal ambiance engine - beautiful ASCII art scenes for your terminal.
+Animated ASCII cityscape for your terminal. A rooftop view of a city skyline with blinking windows, drifting clouds, traffic, planes, helicopters, birds, weather, and a day/night cycle.
 
-Terminart displays procedurally generated, animated ASCII art scenes directly in your terminal. Think of it as a screensaver for your shell - city skylines with blinking windows, drifting clouds, planes, and cars.
+<!-- TODO: replace with an actual demo GIF or screenshot -->
+![demo placeholder](docs/demo.gif)
 
 ## Features
 
-- Procedurally generated scenes (never the same twice)
+- Procedurally animated (never the same twice)
 - Layered rendering with transparent compositing and wide-world parallax scrolling
-- Entity system with multi-frame sprites, auto-mirroring, and sinusoidal bobbing for flying things
-- Behavior systems: wind, day/night cycle, weather (rain/snow/fog/thunder), parallax
-- Thunderstorms with lightning bolts and sky flashes
-- Bidirectional sky traffic (clouds, birds, planes, helicopters); cloud drift controllable via `--cloud-direction`
-- Shared 9-color vehicle palette (planes, helicopters, cars, bird flocks)
-- Clouds re-tinted each frame to track the day/night cycle
-- Multi-frame car animations (rolling wheels)
+- Day/night cycle with smooth sky colour transitions and stars that fade in at dusk
+- Weather: clear, rain, snow, fog, and full thunderstorms with lightning bolts and sky flashes
+- Bidirectional sky traffic (clouds, birds, planes, helicopters); drift direction configurable
+- Multi-frame car animations, shared vehicle palette, cloud re-tinting to track the sky
 - Configurable spawn rates, weather, and day/night speed via CLI
-- External art files with user override support (`~/.config/terminart/`)
-- Per-character coloring via `.colors` palette or `.colormap` positional grid
-- Post-compositing effects (glow, fade)
-- Lightweight (~15 FPS, minimal CPU usage)
+- External art files with user override support (`~/.config/asciicity/`)
+- Per-character colouring via `.colors` palette or `.colormap` positional grid
+- Lightweight: ~15 FPS default, minimal CPU usage
 - Press any key to exit
 
 ## Installation
 
-Requires [Rust](https://rustup.rs/) toolchain.
+Requires the [Rust toolchain](https://rustup.rs/).
 
 ```bash
-git clone https://github.com/Lorakszak/Terminart.git
-cd Terminart
+git clone https://github.com/Lorakszak/asciicity.git
+cd asciicity
 cargo install --path .
 ```
 
@@ -36,40 +33,32 @@ Or build manually:
 
 ```bash
 cargo build --release
-cp target/release/terminart ~/.local/bin/
+cp target/release/asciicity ~/.local/bin/
 ```
 
 ## Usage
 
 ```bash
-# Run default scene (cityscape)
-terminart
-
-# Run a specific scene
-terminart --scene cityscape
-
-# List available scenes
-terminart --list
+# Run with defaults
+asciicity
 
 # Adjust frame rate
-terminart --fps 10
+asciicity --fps 10
 
 # Busier city: more cars, less frequent planes, rainy weather
-terminart --car-rate 3 --plane-rate 0.3 --weather rain
+asciicity --car-rate 3 --plane-rate 0.3 --weather rain
 
 # Thunderstorm with clouds drifting from right to left
-terminart --weather thunder --cloud-direction left
+asciicity --weather thunder --cloud-direction left
 
 # Fast-forward the day/night cycle and start at sunrise
-terminart --time-speed 2 --start-time 5
+asciicity --time-speed 2 --start-time 5
 ```
 
 ### All flags
 
 | Flag | Default | Description |
 |---|---|---|
-| `-s, --scene <SCENE>` | `cityscape` | Scene to display |
-| `-l, --list` | | List available scenes |
 | `--fps <N>` | `15` | Target frames per second |
 | `--cloud-rate <N>` | `1.0` | Cloud spawn multiplier (0 = off) |
 | `--plane-rate <N>` | `1.0` | Plane spawn multiplier |
@@ -86,33 +75,37 @@ terminart --time-speed 2 --start-time 5
 
 Rate multipliers scale spawn intervals inversely: `2.0` is twice as often, `0.5` is half as often, `0.0` disables that entity entirely.
 
-Full invocation with every flag explicit at its default:
-
-```bash
-cargo run -- --scene cityscape --fps 15 --cloud-rate 1.0 --plane-rate 1.0 --heli-rate 1.0 --bird-rate 1.0 --car-rate 1.0 --cloud-direction both --weather-intensity 1.0 --time-speed 0.2 --start-time 20.0
-```
-
-Press any key to exit.
-
-### Auto-start with terminal
+### Auto-start with your terminal
 
 Add to your `~/.zshrc` or `~/.bashrc`:
 
 ```bash
-terminart
+asciicity
 ```
 
-## Available Scenes
+## Customising the art
 
-| Scene | Description |
-|-------|-------------|
-| `cityscape` | Rooftop view of a city skyline at night |
+Drop override files into `~/.config/asciicity/` using the same filenames as under `assets/` in this repo. For example, `~/.config/asciicity/plane.txt` replaces the default plane art. Optional `.colors` (character palette) and `.colormap` (positional grid) files tune per-character colour. If an override file is missing or unreadable, the compiled-in default is used.
 
-## TODO
+## Building from source
 
-- [ ] **User-defined scenes** — config format (TOML/YAML) so users can define their own scenes without writing Rust: custom art, entities, behaviors, and effects.
-- [ ] **Distribution** — publish to crates.io, pre-built binaries for Linux/macOS, AUR package.
+```bash
+cargo build --release
+./target/release/asciicity
+```
+
+Run the quality gate during development:
+
+```bash
+cargo fmt --check
+cargo clippy -- -D warnings
+cargo test
+```
 
 ## License
 
-MIT
+[MIT](LICENSE)
+
+## Built with
+
+[ratatui](https://ratatui.rs/) and [crossterm](https://github.com/crossterm-rs/crossterm).
