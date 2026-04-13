@@ -31,7 +31,35 @@ Animated ASCII cityscape for your terminal. A rooftop view of a city skyline wit
 
 ## Installation
 
-Requires the [Rust toolchain](https://rustup.rs/).
+### From crates.io (recommended)
+
+Requires the [Rust toolchain](https://rustup.rs/). Works on any platform Rust supports.
+
+```bash
+cargo install asciicity
+```
+
+This fetches the latest release from [crates.io](https://crates.io/crates/asciicity), builds it locally in release mode, and drops the binary in `~/.cargo/bin/asciicity` (which `rustup` puts on your `PATH`).
+
+### Pre-built binaries (no toolchain needed)
+
+Download the archive for your platform from the [latest release](https://github.com/Lorakszak/asciicity/releases/latest) and extract the `asciicity` binary to somewhere on your `PATH` (e.g. `~/.local/bin/`).
+
+Available targets:
+
+| Platform | Archive |
+|---|---|
+| Linux x86_64 | `asciicity-vX.Y.Z-x86_64-unknown-linux-gnu.tar.gz` |
+| macOS Intel | `asciicity-vX.Y.Z-x86_64-apple-darwin.tar.gz` |
+| macOS Apple Silicon | `asciicity-vX.Y.Z-aarch64-apple-darwin.tar.gz` |
+
+Each archive ships with a matching `.sha256` file. Verify before extracting:
+
+```bash
+sha256sum -c asciicity-vX.Y.Z-x86_64-unknown-linux-gnu.tar.gz.sha256
+```
+
+### From source
 
 ```bash
 git clone https://github.com/Lorakszak/asciicity.git
@@ -39,11 +67,11 @@ cd asciicity
 cargo install --path .
 ```
 
-Or build manually:
+### Upgrading and uninstalling
 
 ```bash
-cargo build --release
-cp target/release/asciicity ~/.local/bin/
+cargo install asciicity     # upgrade to the latest release
+cargo uninstall asciicity   # remove
 ```
 
 ## Usage
