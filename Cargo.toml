@@ -2,6 +2,21 @@
 name = "asciicity"
 version = "0.1.0"
 edition = "2024"
+description = "Animated ASCII cityscape screensaver for the terminal: buildings, traffic, planes, weather, and a day/night cycle."
+license = "MIT"
+repository = "https://github.com/Lorakszak/asciicity"
+homepage = "https://github.com/Lorakszak/asciicity"
+readme = "README.md"
+keywords = ["terminal", "ascii", "animation", "screensaver", "cityscape"]
+categories = ["command-line-utilities", "visualization"]
+authors = ["Lorakszak"]
+exclude = [
+    "docs/",
+    ".github/",
+    ".superpowers/",
+    ".claude/",
+    "CLAUDE.md",
+]
 
 [dependencies]
 crossterm = "0.28"
