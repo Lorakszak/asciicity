@@ -13,9 +13,9 @@ use crate::scene::{CloudDirection, SceneConfig};
 
 #[derive(Parser)]
 #[command(
-    name = "terminart",
+    name = "asciicity",
     version,
-    about = "Terminal ambiance engine - beautiful ASCII art scenes"
+    about = "Animated ASCII cityscape for your terminal"
 )]
 struct Cli {
     /// Scene to display

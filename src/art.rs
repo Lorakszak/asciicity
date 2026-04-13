@@ -124,9 +124,9 @@ pub fn mirror_frames(frames: &[String]) -> Vec<String> {
 
 fn config_dir() -> Option<PathBuf> {
     if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME") {
-        Some(PathBuf::from(xdg).join("terminart"))
+        Some(PathBuf::from(xdg).join("asciicity"))
     } else if let Ok(home) = std::env::var("HOME") {
-        Some(PathBuf::from(home).join(".config").join("terminart"))
+        Some(PathBuf::from(home).join(".config").join("asciicity"))
     } else {
         None
     }
