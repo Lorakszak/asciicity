@@ -2,8 +2,18 @@
 
 Animated ASCII cityscape for your terminal. A rooftop view of a city skyline with blinking windows, drifting clouds, traffic, planes, helicopters, birds, weather, and a day/night cycle.
 
-<!-- TODO: replace with an actual demo GIF or screenshot -->
-![demo placeholder](docs/demo.gif)
+<!-- TODO: drop the real GIFs into media/ and these placeholders will render. -->
+![asciicity default run](media/demo-default.gif)
+
+### Weather variants
+
+| Rain | Snow |
+|---|---|
+| ![rain](media/demo-rain.gif) | ![snow](media/demo-snow.gif) |
+
+| Fog | Thunder |
+|---|---|
+| ![fog](media/demo-fog.gif) | ![thunder](media/demo-thunder.gif) |
 
 ## Features
 
