@@ -2,18 +2,41 @@
 
 Animated ASCII cityscape for your terminal. A rooftop view of a city skyline with blinking windows, drifting clouds, traffic, planes, helicopters, birds, weather, and a day/night cycle.
 
-<!-- TODO: drop the real GIFs into media/ and these placeholders will render. -->
 ![asciicity default run](media/demo-default.gif)
 
 ### Weather variants
 
-| Rain | Snow |
-|---|---|
-| ![rain](media/demo-rain.gif) | ![snow](media/demo-snow.gif) |
+#### Rain
 
-| Fog | Thunder |
-|---|---|
-| ![fog](media/demo-fog.gif) | ![thunder](media/demo-thunder.gif) |
+```bash
+asciicity --weather rain
+```
+
+![rain](media/demo-rain.gif)
+
+#### Snow
+
+```bash
+asciicity --weather snow
+```
+
+![snow](media/demo-snow.gif)
+
+#### Fog
+
+```bash
+asciicity --weather fog
+```
+
+![fog](media/demo-fog.gif)
+
+#### Thunder
+
+```bash
+asciicity --weather thunder
+```
+
+![thunder](media/demo-thunder.gif)
 
 ## Features
 
@@ -77,20 +100,41 @@ cargo uninstall asciicity   # remove
 ## Usage
 
 ```bash
-# Run with defaults
 asciicity
+```
 
-# Adjust frame rate
+Press any key to exit.
+
+### Examples
+
+Every flag in action. Mix and match to taste.
+
+```bash
+# Lower frame rate for a gentler screensaver feel
 asciicity --fps 10
 
-# Busier city: more cars, less frequent planes, rainy weather
+# Busy city: more cars, fewer planes, rainy weather
 asciicity --car-rate 3 --plane-rate 0.3 --weather rain
 
-# Thunderstorm with clouds drifting from right to left
+# Thunderstorm with clouds drifting right-to-left only
 asciicity --weather thunder --cloud-direction left
 
-# Fast-forward the day/night cycle and start at sunrise
+# Heavy snow but an empty sky (no planes, helis, or birds)
+asciicity --weather snow --plane-rate 0 --heli-rate 0 --bird-rate 0
+
+# Quiet sky, dense traffic, light fog
+asciicity --cloud-rate 0.3 --car-rate 4 --weather fog --weather-intensity 0.5
+
+# Fast-forward the day/night cycle starting at sunrise
 asciicity --time-speed 2 --start-time 5
+
+# Frozen at high noon (time-speed 0 pins the clock)
+asciicity --start-time 12 --time-speed 0
+
+# Every flag explicit at its default - a reference invocation
+asciicity --fps 15 --cloud-rate 1.0 --plane-rate 1.0 --heli-rate 1.0 \
+          --bird-rate 1.0 --car-rate 1.0 --cloud-direction both \
+          --weather-intensity 1.0 --time-speed 0.2 --start-time 20.0
 ```
 
 ### All flags
