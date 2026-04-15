@@ -16,7 +16,7 @@ A rooftop view of a city skyline with blinking windows, drifting clouds, traffic
 [![Downloads](https://img.shields.io/crates/d/asciicity.svg)](https://crates.io/crates/asciicity)
 [![License: MIT](https://img.shields.io/crates/l/asciicity.svg)](LICENSE)
 
-![asciicity default run](media/demo-default.gif)
+![asciicity default run](https://raw.githubusercontent.com/Lorakszak/asciicity/main/media/demo-default.gif)
 
 </div>
 
@@ -31,7 +31,7 @@ A rooftop view of a city skyline with blinking windows, drifting clouds, traffic
 asciicity --weather rain
 ```
 
-![rain](media/demo-rain.gif)
+![rain](https://raw.githubusercontent.com/Lorakszak/asciicity/main/media/demo-rain.gif)
 
 ### Snow
 
@@ -39,7 +39,7 @@ asciicity --weather rain
 asciicity --weather snow
 ```
 
-![snow](media/demo-snow.gif)
+![snow](https://raw.githubusercontent.com/Lorakszak/asciicity/main/media/demo-snow.gif)
 
 ### Fog
 
@@ -47,7 +47,7 @@ asciicity --weather snow
 asciicity --weather fog
 ```
 
-![fog](media/demo-fog.gif)
+![fog](https://raw.githubusercontent.com/Lorakszak/asciicity/main/media/demo-fog.gif)
 
 ### Thunder
 
@@ -55,7 +55,7 @@ asciicity --weather fog
 asciicity --weather thunder
 ```
 
-![thunder](media/demo-thunder.gif)
+![thunder](https://raw.githubusercontent.com/Lorakszak/asciicity/main/media/demo-thunder.gif)
 
 ## Features
 

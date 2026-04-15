@@ -1,6 +1,6 @@
 [package]
 name = "asciicity"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "Animated ASCII cityscape screensaver for the terminal: buildings, traffic, planes, weather, and a day/night cycle."
 license = "MIT"
@@ -16,6 +16,7 @@ exclude = [
     ".superpowers/",
     ".claude/",
     "CLAUDE.md",
+    "media/",
 ]
 
 [dependencies]
