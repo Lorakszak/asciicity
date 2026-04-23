@@ -6,12 +6,12 @@ use ratatui::Frame;
 use ratatui::style::{Color, Style};
 
 use crate::behavior::daynight::DayNight;
-use crate::behavior::parallax::Parallax;
+use crate::behavior::parallax::{PanMode, Parallax};
 use crate::behavior::weather::{Weather, WeatherType};
 use crate::behavior::wind::Wind;
 use crate::entity::Entity;
 use crate::layer::Layer;
-use crate::scene::{CloudDirection, Scene, SceneConfig, scale_interval};
+use crate::scene::{CloudDirection, PanDir, Scene, SceneConfig, scale_interval};
 
 // color utilities available: crate::color::{lerp_rgb, tint_rgb, fade_rgb}
 
@@ -35,6 +35,26 @@ const FAR_DEPTH: f64 = 0.18;
 const MID_DEPTH: f64 = 0.45;
 const FAR_EXTRA: u16 = 60;
 const MID_EXTRA: u16 = 120;
+
+// Small speed ratio between the two cameras so even when both are in ping-pong
+// mode their periods drift apart over time and the layers don't re-synchronize.
+const MID_SPEED_SCALE: f64 = 1.15;
+
+/// Build a parallax camera for a skyline layer based on the requested pan
+/// direction. For `Auto`, use ping-pong and apply `phase_offset` (as a fraction
+/// of `PARALLAX_RANGE`) so two Auto cameras don't move in lockstep.
+fn build_parallax(dir: PanDir, speed: f64, phase_offset: f64) -> Parallax {
+    match dir {
+        PanDir::Left => {
+            Parallax::with_mode(speed, 0.0, PARALLAX_RANGE, PanMode::Left, PARALLAX_RANGE)
+        }
+        PanDir::Right => Parallax::with_mode(speed, 0.0, PARALLAX_RANGE, PanMode::Right, 0.0),
+        PanDir::Auto => {
+            let start = (PARALLAX_RANGE * phase_offset).clamp(0.0, PARALLAX_RANGE);
+            Parallax::with_mode(speed, 0.0, PARALLAX_RANGE, PanMode::PingPong, start)
+        }
+    }
+}
 
 // Cloud limits
 const MAX_CLOUDS: usize = 10;
@@ -171,7 +191,8 @@ pub struct CityscapeScene {
     // Behaviors
     wind: Wind,
     daynight: DayNight,
-    parallax: Parallax,
+    parallax_far: Parallax,
+    parallax_mid: Parallax,
     weather: Weather,
 
     // Spawners
@@ -877,7 +898,8 @@ impl Scene for CityscapeScene {
             entities: Vec::new(),
             wind: Wind::new(rng),
             daynight: DayNight::new(cfg.start_time, cfg.time_speed),
-            parallax: Parallax::new(PARALLAX_SPEED, 0.0, PARALLAX_RANGE),
+            parallax_far: build_parallax(cfg.far_pan, PARALLAX_SPEED, 0.0),
+            parallax_mid: build_parallax(cfg.near_pan, PARALLAX_SPEED * MID_SPEED_SCALE, 0.5),
             weather,
             cloud_timer: 0.0,
             cloud_next: scale_interval(rng.random_range(5.0..12.0), cfg.cloud_rate),
@@ -905,7 +927,8 @@ impl Scene for CityscapeScene {
     fn tick(&mut self, dt: f64, rng: &mut SmallRng) {
         self.wind.tick(dt, rng);
         self.daynight.tick(dt);
-        self.parallax.tick(dt);
+        self.parallax_far.tick(dt);
+        self.parallax_mid.tick(dt);
         self.weather
             .tick(dt, rng, self.width, self.height, self.wind.force_x());
 
@@ -936,11 +959,11 @@ impl Scene for CityscapeScene {
         self.scratch_layer.composite(buf, area);
 
         // 3. Far skyline with parallax
-        let far_ox = self.parallax.offset_x(FAR_DEPTH);
+        let far_ox = self.parallax_far.offset_x(FAR_DEPTH);
         self.far_layer.composite_offset(buf, area, far_ox, 0);
 
         // 4. Mid skyline with parallax
-        let mid_ox = self.parallax.offset_x(MID_DEPTH);
+        let mid_ox = self.parallax_mid.offset_x(MID_DEPTH);
         self.mid_layer.composite_offset(buf, area, mid_ox, 0);
 
         // 5. Rooftop

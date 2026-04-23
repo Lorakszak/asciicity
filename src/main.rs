@@ -9,7 +9,7 @@ mod scene;
 
 use clap::{Parser, ValueEnum};
 
-use crate::scene::{CloudDirection, SceneConfig};
+use crate::scene::{CloudDirection, PanDir, SceneConfig};
 
 #[derive(Parser)]
 #[command(
@@ -45,6 +45,14 @@ struct Cli {
     /// Direction clouds drift across the sky
     #[arg(long, value_enum, default_value_t = CloudDirectionArg::Both)]
     cloud_direction: CloudDirectionArg,
+
+    /// Pan direction for the far (background) skyline layer
+    #[arg(long, value_enum, default_value_t = PanDirArg::Auto)]
+    far_pan: PanDirArg,
+
+    /// Pan direction for the near (mid) skyline layer
+    #[arg(long, value_enum, default_value_t = PanDirArg::Auto)]
+    near_pan: PanDirArg,
 
     /// Weather override
     #[arg(long, value_enum)]
@@ -101,6 +109,23 @@ impl CloudDirectionArg {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, ValueEnum)]
+enum PanDirArg {
+    Auto,
+    Left,
+    Right,
+}
+
+impl PanDirArg {
+    fn to_cfg(self) -> PanDir {
+        match self {
+            PanDirArg::Auto => PanDir::Auto,
+            PanDirArg::Left => PanDir::Left,
+            PanDirArg::Right => PanDir::Right,
+        }
+    }
+}
+
 /// Reject non-finite values and values outside `[min, max]`. Gives the user a
 /// clear error instead of silent NaN propagation or a `Duration` panic.
 fn check_range(name: &str, value: f64, min: f64, max: f64) -> Result<f64, String> {
@@ -147,6 +172,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         bird_rate: cli.bird_rate,
         car_rate: cli.car_rate,
         cloud_direction: cli.cloud_direction.to_cfg(),
+        far_pan: cli.far_pan.to_cfg(),
+        near_pan: cli.near_pan.to_cfg(),
         weather: cli.weather.map(|w| w.as_str().to_string()),
         weather_intensity: cli.weather_intensity,
         time_speed: cli.time_speed,

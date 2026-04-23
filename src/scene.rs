@@ -9,6 +9,18 @@ pub enum CloudDirection {
     Both,
 }
 
+/// Per-layer pan direction requested by the user.
+///
+/// `Auto` lets the scene pick a default (today: ping-pong with a phase offset
+/// per layer so the layers don't move in lockstep). `Left`/`Right` force the
+/// layer to scroll continuously in that direction, wrapping at the bounds.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PanDir {
+    Auto,
+    Left,
+    Right,
+}
+
 /// Runtime configuration passed to every scene from the CLI.
 ///
 /// Rate multipliers scale spawn intervals inversely: 2.0 = twice as frequent,
@@ -22,6 +34,10 @@ pub struct SceneConfig {
     pub bird_rate: f64,
     pub car_rate: f64,
     pub cloud_direction: CloudDirection,
+    /// Pan direction for the far (background) skyline layer.
+    pub far_pan: PanDir,
+    /// Pan direction for the near (mid) skyline layer.
+    pub near_pan: PanDir,
     /// Weather override: "clear", "rain", "snow", "fog", "thunder". None leaves the scene default.
     pub weather: Option<String>,
     pub weather_intensity: f64,
@@ -40,6 +56,8 @@ impl Default for SceneConfig {
             bird_rate: 1.0,
             car_rate: 1.0,
             cloud_direction: CloudDirection::Both,
+            far_pan: PanDir::Auto,
+            near_pan: PanDir::Auto,
             weather: None,
             weather_intensity: 1.0,
             time_speed: 0.2,

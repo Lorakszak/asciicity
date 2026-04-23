@@ -64,6 +64,7 @@ asciicity --weather thunder
 - Day/night cycle with smooth sky colour transitions and stars that fade in at dusk
 - Weather: clear, rain, snow, fog, and full thunderstorms with lightning bolts and sky flashes
 - Bidirectional sky traffic (clouds, birds, planes, helicopters); drift direction configurable
+- Independent per-layer parallax: the far and near skylines pan on their own cameras and can be locked to a fixed direction
 - Multi-frame car animations, shared vehicle palette, cloud re-tinting to track the sky
 - Configurable spawn rates, weather, and day/night speed via CLI
 - External art files with user override support (`~/.config/asciicity/`)
@@ -139,6 +140,9 @@ asciicity --car-rate 3 --plane-rate 0.3 --weather rain
 # Thunderstorm with clouds drifting right-to-left only
 asciicity --weather thunder --cloud-direction left
 
+# Far skyline slides left, near skyline slides right (crossing parallax)
+asciicity --far-pan left --near-pan right
+
 # Heavy snow but an empty sky (no planes, helis, or birds)
 asciicity --weather snow --plane-rate 0 --heli-rate 0 --bird-rate 0
 
@@ -154,6 +158,7 @@ asciicity --start-time 12 --time-speed 0
 # Every flag explicit at its default - a reference invocation
 asciicity --fps 15 --cloud-rate 1.0 --plane-rate 1.0 --heli-rate 1.0 \
           --bird-rate 1.0 --car-rate 1.0 --cloud-direction both \
+          --far-pan auto --near-pan auto \
           --weather-intensity 1.0 --time-speed 0.2 --start-time 20.0
 ```
 
@@ -169,6 +174,8 @@ asciicity --fps 15 --cloud-rate 1.0 --plane-rate 1.0 --heli-rate 1.0 \
 | `--bird-rate <N>` | `1.0` | Bird flock spawn multiplier |
 | `--car-rate <N>` | `1.0` | Car spawn multiplier |
 | `--cloud-direction <DIR>` | `both` | Cloud drift direction: `left`, `right`, `both` |
+| `--far-pan <DIR>` | `auto` | Far skyline pan direction: `auto` (ping-pong), `left`, `right` |
+| `--near-pan <DIR>` | `auto` | Near skyline pan direction: `auto` (ping-pong), `left`, `right` |
 | `--weather <TYPE>` | `clear` | One of `clear`, `rain`, `snow`, `fog`, `thunder` |
 | `--weather-intensity <N>` | `1.0` | Weather intensity (0.1..3.0) |
 | `--time-speed <N>` | `0.2` | In-game hours per real second |
