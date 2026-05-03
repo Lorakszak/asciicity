@@ -25,6 +25,11 @@ const TAG_HELI: u32 = 3;
 const TAG_BIRD: u32 = 4;
 const TAG_CAR: u32 = 5;
 
+// Car art is 4 rows tall. Two stacked lanes need road_h > 2*CAR_H to fit
+// without overlap; below that the spawner falls back to a single
+// bottom-anchored lane.
+const CAR_H: u16 = 4;
+
 // Parallax
 // Range/speed give ~2 minute full ping-pong sweep. Extras must cover the max
 // shift on each layer (range * depth) with slack, otherwise there's nothing
@@ -656,8 +661,15 @@ impl CityscapeScene {
     fn spawn_car(&mut self, rng: &mut SmallRng) {
         let idx = rng.random_range(0..self.art.cars.len());
         let road_h = self.height.saturating_sub(self.skyline_y);
-        let lane_mid = self.skyline_y + road_h / 2;
-        let going_right = rng.random::<bool>();
+
+        // Two lanes only fit when the road is tall enough; otherwise drop the
+        // bottom lane so the surviving lane stays fully on-screen.
+        let two_lanes = road_h > CAR_H * 2;
+        let going_right = if two_lanes {
+            rng.random::<bool>()
+        } else {
+            true
+        };
 
         // All car art faces right. Mirror for left-going lane.
         let frames = if going_right {
@@ -667,11 +679,15 @@ impl CityscapeScene {
         };
         let colors = self.art.cars[idx].colors.clone();
 
-        // Top lane goes right, bottom lane goes left. Cars are ~4 rows tall.
-        let y = if going_right {
-            (self.skyline_y + 2) as f64
+        // Anchor lanes to the road edges so the car body always fits: top
+        // lane just below the curb, bottom lane flush with the screen
+        // bottom. In single-lane fallback both anchors collapse to the
+        // bottom anchor.
+        let bottom_y = self.height.saturating_sub(CAR_H);
+        let y = if going_right && two_lanes {
+            (self.skyline_y + 1) as f64
         } else {
-            (lane_mid + 1) as f64
+            bottom_y as f64
         };
         let x = if going_right {
             -(rng.random_range(10.0..30.0))
