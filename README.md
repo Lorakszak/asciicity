@@ -155,11 +155,15 @@ asciicity --time-speed 2 --start-time 5
 # Frozen at high noon (time-speed 0 pins the clock)
 asciicity --start-time 12 --time-speed 0
 
+# Skip the empty-sky warmup - first frame already shows traffic, clouds, planes
+asciicity --warmup 5
+
 # Every flag explicit at its default - a reference invocation
 asciicity --fps 15 --cloud-rate 1.0 --plane-rate 1.0 --heli-rate 1.0 \
           --bird-rate 1.0 --car-rate 1.0 --cloud-direction both \
           --far-pan auto --near-pan auto \
-          --weather-intensity 1.0 --time-speed 0.2 --start-time 20.0
+          --weather-intensity 1.0 --time-speed 0.2 --start-time 20.0 \
+          --warmup 0.0
 ```
 
 <details>
@@ -180,6 +184,7 @@ asciicity --fps 15 --cloud-rate 1.0 --plane-rate 1.0 --heli-rate 1.0 \
 | `--weather-intensity <N>` | `1.0` | Weather intensity (0.1..3.0) |
 | `--time-speed <N>` | `0.2` | In-game hours per real second |
 | `--start-time <N>` | `20.0` | Starting hour of day (0..24) |
+| `--warmup <SECONDS>` | `0.0` | Pre-simulate the scene for N seconds so the first frame is already populated. Day/night clock is automatically back-shifted so the visible start matches `--start-time`. |
 | `-h, --help` | | Print help |
 | `-V, --version` | | Print version |
 

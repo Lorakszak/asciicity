@@ -57,12 +57,13 @@ cargo run -- --car-rate 3 --weather rain               # busier cars + rain
 cargo run -- --weather thunder                         # thunderstorm with lightning
 cargo run -- --cloud-direction left                    # clouds drift right-to-left only
 cargo run -- --time-speed 2 --start-time 5             # fast day/night starting at sunrise
+cargo run -- --warmup 5                                # first frame already populated
 cargo install --path .                                 # install system-wide
 ```
 
 Full invocation with every flag explicit at its default:
 ```bash
-cargo run -- --fps 15 --cloud-rate 1.0 --plane-rate 1.0 --heli-rate 1.0 --bird-rate 1.0 --car-rate 1.0 --cloud-direction both --far-pan auto --near-pan auto --weather-intensity 1.0 --time-speed 0.2 --start-time 20.0
+cargo run -- --fps 15 --cloud-rate 1.0 --plane-rate 1.0 --heli-rate 1.0 --bird-rate 1.0 --car-rate 1.0 --cloud-direction both --far-pan auto --near-pan auto --weather-intensity 1.0 --time-speed 0.2 --start-time 20.0 --warmup 0.0
 ```
 
 Press any key to exit.

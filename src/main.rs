@@ -69,6 +69,12 @@ struct Cli {
     /// Starting hour of day (0.0..24.0)
     #[arg(long, default_value_t = 20.0)]
     start_time: f64,
+
+    /// Pre-simulate the scene for N seconds so it starts already populated
+    /// (0 = disabled, default; ~5 fills cars and clouds quickly, larger
+    /// values fill rarer entities like planes and birds)
+    #[arg(long, default_value_t = 0.0)]
+    warmup: f64,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, ValueEnum)]
@@ -154,7 +160,16 @@ fn validate(cli: &Cli) -> Result<(), String> {
     check_range("time-speed", cli.time_speed, 0.0, 1000.0)?;
     // start-time is modulo 24 at use, but reject obviously wrong values upfront.
     check_range("start-time", cli.start_time, 0.0, 24.0)?;
+    check_range("warmup", cli.warmup, 0.0, 600.0)?;
     Ok(())
+}
+
+/// Shift the user's `start_time` backward by however many in-game hours the
+/// warmup will tick through, so the day/night clock lands exactly on the
+/// requested hour at the first rendered frame. Wraps modulo 24.
+fn compensated_start(start_time: f64, warmup: f64, time_speed: f64) -> f64 {
+    let shifted = start_time - warmup * time_speed;
+    shifted.rem_euclid(24.0)
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -177,8 +192,45 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         weather: cli.weather.map(|w| w.as_str().to_string()),
         weather_intensity: cli.weather_intensity,
         time_speed: cli.time_speed,
-        start_time: cli.start_time,
+        start_time: compensated_start(cli.start_time, cli.warmup, cli.time_speed),
+        warmup_seconds: cli.warmup,
     };
 
     engine::run::<cityscape::CityscapeScene>(cli.fps, cfg)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn compensated_start_wraps_negative_into_day() {
+        // 0:00 minus 6 in-game hours wraps to 18:00.
+        assert!((compensated_start(0.0, 30.0, 0.2) - 18.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn compensated_start_lands_at_user_intent() {
+        // 30s warmup at 0.2 hr/s shifts 6h back from 20:00 -> 14:00. After
+        // the warmup ticks 6h forward the day/night clock is at 20:00.
+        assert!((compensated_start(20.0, 30.0, 0.2) - 14.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn compensated_start_no_warmup_is_identity() {
+        assert!((compensated_start(7.5, 0.0, 0.2) - 7.5).abs() < 1e-9);
+    }
+
+    #[test]
+    fn compensated_start_zero_speed_is_identity() {
+        // Frozen day/night: warmup advances no in-game time, no shift.
+        assert!((compensated_start(7.5, 60.0, 0.0) - 7.5).abs() < 1e-9);
+    }
+
+    #[test]
+    fn compensated_start_handles_multiple_day_wrap() {
+        // 600s * 1.0 hr/s = 600 in-game hours = 25 days. From 12:00 should
+        // wrap back to 12:00 since 600 % 24 = 0.
+        assert!((compensated_start(12.0, 600.0, 1.0) - 12.0).abs() < 1e-9);
+    }
 }

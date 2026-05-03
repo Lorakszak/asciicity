@@ -43,7 +43,21 @@ fn run_inner<S: Scene>(fps: u32, cfg: SceneConfig) -> Result<(), Box<dyn std::er
 
     let mut rng = SmallRng::from_os_rng();
     let size = terminal.size()?;
+    let warmup_seconds = cfg.warmup_seconds;
     let mut scene = S::setup(size.width, size.height, &cfg, &mut rng);
+
+    // Pre-simulate the scene so the first rendered frame is already populated
+    // with cars, clouds, and so on instead of an empty world. The day/night
+    // clock advances during this loop, which is why main.rs back-shifts
+    // start_time by warmup * time_speed before we get here.
+    if warmup_seconds > 0.0 {
+        let dt = 1.0 / 60.0;
+        let mut t = 0.0;
+        while t < warmup_seconds {
+            scene.tick(dt, &mut rng);
+            t += dt;
+        }
+    }
 
     // Defensive floor: fps = 0 would make from_secs_f64 panic on infinity.
     // CLI validation already rejects this, but belt-and-suspenders.

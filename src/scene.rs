@@ -45,6 +45,9 @@ pub struct SceneConfig {
     pub time_speed: f64,
     /// Starting hour (0.0..24.0).
     pub start_time: f64,
+    /// Seconds of simulation to fast-forward before the first rendered frame.
+    /// 0 disables. Lets the scene start pre-populated instead of empty.
+    pub warmup_seconds: f64,
 }
 
 impl Default for SceneConfig {
@@ -62,6 +65,7 @@ impl Default for SceneConfig {
             weather_intensity: 1.0,
             time_speed: 0.2,
             start_time: 20.0,
+            warmup_seconds: 0.0,
         }
     }
 }
