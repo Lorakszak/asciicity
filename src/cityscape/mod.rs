@@ -563,7 +563,7 @@ impl CityscapeScene {
             self.width as f64 + rng.random_range(5.0..25.0)
         };
 
-        let mut cloud = Entity::new(x, y, frames, 1.0, Style::default(), OVERLAY);
+        let mut cloud = Entity::new(x, y, frames, 2.5, Style::default(), OVERLAY);
         cloud.vx = if going_right { speed } else { -speed };
         cloud.tag = TAG_CLOUD;
         cloud.colors = colors;
